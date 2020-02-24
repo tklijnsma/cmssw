@@ -92,6 +92,7 @@ CaloSD::CaloSD(const std::string& name,
   primAncestor = cleanIndex = totalHits = primIDSaved = 0;
   forceSave = false;
 
+<<<<<<< HEAD
   edm::LogVerbatim("CaloSim") << "CaloSD: Minimum energy of track for saving it " << energyCut / CLHEP::GeV
                               << " GeV\n        Use of HitID Map " << useMap << "\n        Check last " << nCheckedHits
                               << " before saving the hit\n        Correct TOF globally by " << correctT
@@ -100,6 +101,18 @@ CaloSD::CaloSD(const std::string& name,
                               << eminHitD / CLHEP::MeV << " MeV (for nonzero depths);\n        Time Slice Unit "
                               << timeSlice << "\nIgnore TrackID Flag " << ignoreTrackID << " UseFineCaloID flag "
                               << useFineCaloID_;
+=======
+  edm::LogVerbatim("CaloSim") << "CaloSD: Minimum energy of track for saving it " << energyCut / GeV << " GeV"
+                              << "\n"
+                              << "        Use of HitID Map " << useMap << "\n"
+                              << "        Check last " << nCheckedHits << " before saving the hit\n"
+                              << "        Correct TOF globally by " << correctT << " ns (Flag =" << corrTOFBeam << ")\n"
+                              << "        Save hits recorded before " << tmaxHit << " ns and if energy is above "
+                              << eminHit / MeV << " MeV (for depth 0) or " << eminHitD / MeV
+                              << " MeV (for nonzero depths);\n"
+                              << "        Time Slice Unit " << timeSlice << "\nIgnore TrackID Flag " << ignoreTrackID
+                              << " UseFineCaloID flag " << useFineCaloID_;
+>>>>>>> Trying to pick Sunanda's commits
 }
 
 CaloSD::~CaloSD() {}
