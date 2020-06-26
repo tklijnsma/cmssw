@@ -494,7 +494,6 @@ g4SimHits = cms.EDProducer("OscarMTProducer",
     TotemSD = cms.PSet(
         Verbosity = cms.untracked.int32(0)
     ),
-<<<<<<< HEAD
     TotemT2ScintSD = cms.PSet(
         UseBirkLaw    = cms.bool(True),
         BirkC3        = cms.double(1.75),
@@ -503,8 +502,6 @@ g4SimHits = cms.EDProducer("OscarMTProducer",
         TimeSliceUnit = cms.double(1),
         IgnoreTrackID = cms.bool(False),
     ),
-=======
->>>>>>> Trying to pick Sunanda's commits
     PPSDiamondSD = cms.PSet(
         Verbosity = cms.int32(0)
     ),
