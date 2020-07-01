@@ -26,6 +26,7 @@ public:
     //1
     void fillTruthArrays();
     //2
+    void fillTiclAssignment();
     void assignTreePointers() ;
     void flattenRechitFeatures();
 
@@ -47,6 +48,7 @@ private:
     void calculateSimclusterFeatures();
     void calculateTruthFractions();
     void fillTruthAssignment();
+
 
     //temporary for (layer cluster) fraction calculation. detID to hit index and fraction
     std::unordered_map<DetId, std::pair<size_t, float>> detIDHitAsso_;
@@ -109,6 +111,9 @@ private:
     std::vector<float>   truthSimclusterDirR_;
     std::vector<float>   truthSimclusterInnerWindow_;
 
+    std::vector<int>  ticlHitAssignementIdx_;
+    std::vector<float> ticlHitAssignedEnergies_;
+
     //some globals mostly for plotting
 
     float windowEta_, windowPhi_;
@@ -168,6 +173,10 @@ private:
     static std::vector<float>  * sp_truthSimclusterDirEta_;
     static std::vector<float>  * sp_truthSimclusterDirPhi_;
     static std::vector<float>  * sp_truthSimclusterDirR_;
+
+
+    static std::vector<int>   * sp_ticlHitAssignementIdx_;
+    static std::vector<float> * sp_ticlHitAssignedEnergies_;
 
     static float * sp_windowEta_;
     static float * sp_windowPhi_;

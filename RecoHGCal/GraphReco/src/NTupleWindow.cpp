@@ -62,6 +62,8 @@ std::vector<float>  * NTupleWindow::sp_truthSimclusterDirEta_=0;
 std::vector<float>  * NTupleWindow::sp_truthSimclusterDirPhi_=0;
 std::vector<float>  * NTupleWindow::sp_truthSimclusterDirR_=0;
 
+std::vector<int>   * NTupleWindow::sp_ticlHitAssignementIdx_=0;
+std::vector<float> * NTupleWindow::sp_ticlHitAssignedEnergies_=0;
 
 float * NTupleWindow::sp_windowEta_=0;
 float * NTupleWindow::sp_windowPhi_=0;
@@ -132,6 +134,9 @@ void NTupleWindow::createTreeBranches(TTree* t){
     t->Branch("truthSimclusterDirEta",&sp_truthSimclusterDirEta_);
     t->Branch("truthSimclusterDirPhi",&sp_truthSimclusterDirPhi_);
     t->Branch("truthSimclusterDirR",&sp_truthSimclusterDirR_);
+
+    t->Branch("ticlHitAssignementIdx",  &sp_ticlHitAssignementIdx_  );
+    t->Branch("ticlHitAssignedEnergies",&sp_ticlHitAssignedEnergies_);
 
     t->Branch("windowEta",sp_windowEta_);
     t->Branch("windowPhi",sp_windowPhi_);
@@ -227,6 +232,10 @@ void NTupleWindow::assignTreePointers()  {
     sp_truthSimclusterDirPhi_=&truthSimclusterDirPhi_;
     sp_truthSimclusterDirR_=&truthSimclusterDirR_;
 
+
+    sp_ticlHitAssignementIdx_  = &ticlHitAssignementIdx_;
+    sp_ticlHitAssignedEnergies_= &ticlHitAssignedEnergies_;
+
     sp_windowEta_ = &windowEta_;
     sp_windowPhi_ = &windowPhi_;
 
@@ -290,6 +299,9 @@ void NTupleWindow::clear(){
     truthSimclusterDirPhi_.clear();
     truthSimclusterDirR_.clear();
 
+
+    ticlHitAssignementIdx_.clear();
+    ticlHitAssignedEnergies_.clear();
 
 }
 
@@ -498,6 +510,7 @@ void NTupleWindow::fillTruthAssignment(){
     truthHitAssignedDirPhi_.resize(truthHitFractions_.size());
     truthHitAssignedDirR_.resize(truthHitFractions_.size());
 
+
     bool nosim = simClusters_.size() < 1;
 
     for (size_t i_hit = 0; i_hit < truthHitFractions_.size(); i_hit++) {
@@ -533,5 +546,27 @@ void NTupleWindow::fillTruthAssignment(){
         truthHitAssignedInner_.at(i_hit) = truthSimclusterInnerWindow_.at(maxfrac_idx);
 
     }
+}
+
+
+void NTupleWindow::fillTiclAssignment(){//last
+
+
+    ticlHitAssignementIdx_.resize(truthHitFractions_.size(), -1);
+    ticlHitAssignedEnergies_.resize(truthHitFractions_.size(), -1);
+
+
+    for (size_t it=0;it<ticltracksters_.size();it++) {
+
+        for(const auto& ID: ticltracksters_.at(it)->assohits){
+            auto pos = detIDHitAsso_.find(ID);
+            if(pos == detIDHitAsso_.end()) //not in window
+                continue;
+            size_t idx = pos->second.first;
+            ticlHitAssignementIdx_.at(idx)=it;
+            ticlHitAssignedEnergies_.at(idx)=ticltracksters_.at(it)->energy;
+        }
+    }
+
 }
 

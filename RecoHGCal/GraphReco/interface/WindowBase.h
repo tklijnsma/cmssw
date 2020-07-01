@@ -20,15 +20,24 @@
 #include "DataFormats/CaloRecHit/interface/CaloClusterFwd.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
+#include "DataFormats/HGCalReco/interface/Trackster.h"
 #include <vector>
 
 #include "HGCalTrackPropagator.h"
+
 
 #define DEBUGPRINT(x) {std::cout << #x << ": " << x << std::endl;}
 
 struct HGCRecHitWithPos{
     HGCRecHit * hit;
     GlobalPoint  pos;
+};
+
+struct Tracksterwithpos_and_energy{
+    const ticl::Trackster * trackster;
+    GlobalPoint  pos;
+    float energy;
+    std::vector<size_t> assohits;
 };
 
 
@@ -63,6 +72,16 @@ public:
         if (accept((float)t.pos.phi(), (float)t.pos.eta())
                 && t.obj->pt()>1) {
             tracks_.push_back(&t);
+            return true;
+        }
+        return false;
+    }
+
+    inline bool maybeAddTrackster(
+            const Tracksterwithpos_and_energy & trackster) {
+        //potential cuts here!
+        if (accept(trackster.pos.phi(), trackster.pos.eta())) {
+            ticltracksters_.push_back(&trackster);
             return true;
         }
         return false;
@@ -165,6 +184,8 @@ protected:
 
     WindowBase(){}
 
+
+    std::vector<const Tracksterwithpos_and_energy *> ticltracksters_;
     std::vector<const TrackWithHGCalPos *> tracks_;
     std::vector<const HGCRecHitWithPos *> recHits;
     std::vector<const reco::CaloCluster * > layerClusters_;

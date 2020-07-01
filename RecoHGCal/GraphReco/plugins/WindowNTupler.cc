@@ -41,6 +41,8 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 #include "../interface/NTupleWindow.h"
+#include "DataFormats/ParticleFlowReco/interface/HGCalMultiCluster.h"
+#include <algorithm>
 //
 // class declaration
 //
@@ -68,7 +70,13 @@ class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one:
       virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
       virtual void endJob() override;
 
+
+
+      Tracksterwithpos_and_energy assignPositionAndEnergy(const ticl::Trackster& ,
+              const reco::CaloClusterCollection& )const;
+
       // ----------member data ---------------------------
+      edm::EDGetTokenT<std::vector<ticl::Trackster>> tracksters_token_;
       edm::EDGetTokenT<TrackCollection> tracksToken_;
       edm::EDGetTokenT<reco::CaloClusterCollection> layerClustersToken_;
       edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
@@ -83,6 +91,41 @@ class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one:
 
 };
 
+
+Tracksterwithpos_and_energy WindowNTupler::assignPositionAndEnergy(const ticl::Trackster& trackster,
+        const reco::CaloClusterCollection& caloclusters)const{
+
+    std::array<float, 3> baricenter{{0., 0., 0.}};
+    float total_weight = 0.;
+    std::vector<size_t> assohits;
+    if (!trackster.vertices().empty()) {
+
+        int counter = 0;
+        std::for_each(std::begin(trackster.vertices()), std::end(trackster.vertices()), [&](unsigned int idx) {
+            auto fraction = 1.f / trackster.vertex_multiplicity(counter++);
+            auto weight = caloclusters.at(idx).energy() * fraction;
+            total_weight += weight;
+            baricenter[0] += caloclusters.at(idx).x() * weight;
+            baricenter[1] += caloclusters.at(idx).y() * weight;
+            baricenter[2] += caloclusters.at(idx).z() * weight;
+
+            auto haf = caloclusters.at(idx).hitsAndFractions();
+            for(const auto& hf:haf){
+                assohits.push_back(hf.first);
+            }
+
+        });
+        std::transform(
+                std::begin(baricenter), std::end(baricenter), std::begin(baricenter), [&total_weight](double val) -> double {
+            return val / total_weight;
+        });
+    }
+//Tracksterwithpos r=
+    auto pos = GlobalPoint(baricenter[0], baricenter[1], baricenter[2]);
+    return {&trackster,pos ,total_weight,assohits};
+
+}
+
 //
 // constants, enums and typedefs
 //
@@ -96,6 +139,7 @@ class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one:
 //
 WindowNTupler::WindowNTupler(const edm::ParameterSet& config)
  :
+  tracksters_token_(consumes<std::vector<ticl::Trackster>>(config.getParameter<edm::InputTag>("tracksters"))),
   tracksToken_(consumes<TrackCollection>(config.getParameter<edm::InputTag>("tracks"))),
   layerClustersToken_(consumes<reco::CaloClusterCollection>(config.getParameter<edm::InputTag>("layerClusters"))),
   simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))),
@@ -141,7 +185,17 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    using namespace edm;
 
-   //prepare collections
+   auto inlayerclusters = iEvent.get(layerClustersToken_);
+   auto insimclusters = iEvent.get(simClusterToken_);
+
+   std::vector<Tracksterwithpos_and_energy> tracksters;
+   auto intracksters = iEvent.get(tracksters_token_);
+   for(const auto& t: intracksters){
+       auto twpe = assignPositionAndEnergy(t, inlayerclusters);
+       tracksters.push_back(twpe);
+   }
+
+
 
    //get and propagate tracks
    std::vector<TrackWithHGCalPos> proptracks;
@@ -163,8 +217,6 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         [](const HGCRecHitWithPos& rh1, const HGCRecHitWithPos& rh2) 
             { return rh1.hit->energy() > rh2.hit->energy();});
 
-   auto inlayerclusters = iEvent.get(layerClustersToken_);
-   auto insimclusters = iEvent.get(simClusterToken_);
 
 
    //DEBUG
@@ -174,6 +226,7 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    DEBUGPRINT(inlayerclusters.size());
    DEBUGPRINT(insimclusters.size());
 
+   std::vector<size_t> filledtracksters(tracksters.size(),0);
    std::vector<size_t> filledtrack(proptracks.size(),0);
    std::vector<size_t> filledrechits(allrechits.size(),0);
    std::vector<size_t> filledlayercluster(inlayerclusters.size(),0);
@@ -201,6 +254,11 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                    filledlayercluster.at(it)++;
            }
        }
+       for(size_t it=0;it<tracksters.size();it++){
+           if(filledtracksters.at(it)>3) continue;
+           if(window.maybeAddTrackster(tracksters.at(it)))
+               filledtracksters.at(it)++;
+       }
 
        for(size_t it=0;it<insimclusters.size();it++) {
            if(filledsimclusters.at(it)>3) continue;
@@ -212,6 +270,7 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        window.fillFeatureArrays();
        window.flattenRechitFeatures();
        window.fillTruthArrays();
+       window.fillTiclAssignment();
        window.assignTreePointers();
 
        outTree_->Fill();
