@@ -163,8 +163,10 @@ WindowNTupler::WindowNTupler(const edm::ParameterSet& config)
             config.getParameter<double>("etaFrameWidth"),
             config.getParameter<double>("phiFrameWidth"));
 
-    for(auto& w: windows_)
+    for(auto& w: windows_){
         w.setMode(WindowBase::useRechits);//FIXME make configurable
+        w.setRemoveFrameSimclusters(config.getParameter<bool>("removeFrameSimclusters"));
+    }
         //w.setMode(WindowBase::useLayerClusters);//FIXME make configurable
 
 }

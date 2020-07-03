@@ -110,12 +110,19 @@ public:
     inline bool maybeAddSimCluster(const SimCluster& sc){
         //potential cuts here!
         if (accept(sc.impactPoint().phi(),sc.impactPoint().eta())){
-            simClusters_.push_back(&sc);
-            simClustersInnerWindow_.push_back(isInner(sc.impactPoint().eta(),
-                    sc.impactPoint().phi()));
-
-            return true;
+            bool isinner=isInner(sc.impactPoint().eta(),sc.impactPoint().phi());
+            if(!removeFrameSimcluster_){
+                simClusters_.push_back(&sc);
+                simClustersInnerWindow_.push_back(isinner);
+                return true;
+            }
+            else if(isinner){
+                simClusters_.push_back(&sc);
+                simClustersInnerWindow_.push_back(isinner);
+                return true;
+            }
         }
+        badSimClusters_.push_back(&sc);
         return false;
     }
 
@@ -132,6 +139,10 @@ public:
 
 
     //debug functions
+
+    void setRemoveFrameSimclusters(bool set){
+        removeFrameSimcluster_=set;
+    }
 
     void printDebug()const;
 
@@ -182,7 +193,8 @@ private:
 
 protected:
 
-    WindowBase(){}
+    WindowBase():removeFrameSimcluster_(true){}
+    bool removeFrameSimcluster_;
 
 
     std::vector<const Tracksterwithpos_and_energy *> ticltracksters_;
@@ -190,6 +202,7 @@ protected:
     std::vector<const HGCRecHitWithPos *> recHits;
     std::vector<const reco::CaloCluster * > layerClusters_;
     std::vector<const SimCluster*> simClusters_;
+    std::vector<const SimCluster*> badSimClusters_;
     std::vector<bool> simClustersInnerWindow_;
 
     //for one track

@@ -854,17 +854,8 @@ void CaloTruthAccumulator::assignSimClusterCoordinates(std::unique_ptr<SimCluste
         auto oldvert = vertex;
         prop_.propagate(vertex, momentum, t.charge());
 
-        if (fabs(vertex.eta()) > 1.5 && fabs(vertex.eta()) < 3.) {
-          /*
-                    std::cout << sc << std::endl;
-                    std::cout << "momentum.p" << std::sqrt(momentum.Vect().Mag2()) << std::endl;
-                    std::cout << "orig (eta,phi,z,t) "<< oldvert.eta()
-                                << " " <<oldvert.phi()<< " "  << oldvert.z()<< " "<< oldvert.T()<< " "   << std::endl;
-                    std::cout << "prop (eta,phi,z,t) "<< vertex.eta()
-                                << " " <<vertex.phi()<< " "  << vertex.z()<< " "<< vertex.T()<< " "   << std::endl;
-                    std::cout << "hitpos (eta,phi,z,t) "<< thispos.eta()
-                                << " " <<thispos.phi()<< " "  << thispos.z()<<  " "   << std::endl;
-                                */
+        if (fabs(vertex.eta()) > 1.6 && fabs(vertex.eta()) < 3.1) {
+
           totalhgcalinthisround++;
           double error = reco::deltaR(oldvert.eta(), oldvert.phi(), vertex.eta(), vertex.phi());
           if (error > 0.04)

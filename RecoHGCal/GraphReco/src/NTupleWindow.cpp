@@ -151,6 +151,7 @@ NTupleWindow::NTupleWindow(float centerEta, float centerPhi,
 
     windowEta_ = centerEta;
     windowPhi_ = centerPhi;
+    removeFrameSimcluster_=true;
 }
 
 
@@ -340,6 +341,7 @@ void NTupleWindow::fillFeatureArrays(){
 void NTupleWindow::fillTruthArrays(){
 
     createDetIDHitAssociation();
+    cleanSimclusters();
     calculateSimclusterFeatures();
     calculateTruthFractions();
     fillTruthAssignment();
@@ -548,6 +550,28 @@ void NTupleWindow::fillTruthAssignment(){
     }
 }
 
+
+
+void NTupleWindow::cleanSimclusters(){
+
+    auto rh_energycopy = recHitEnergy_;
+
+    //clean everything that was NOT assigned (for whatever reason) to this window
+    for(const auto& sc: badSimClusters_){
+        const auto& hitsandfracs = sc->hits_and_fractions();
+        for(const auto& haf: hitsandfracs){
+            auto pos = detIDHitAsso_.find(haf.first);
+            if(pos == detIDHitAsso_.end()) //edges or not included in layer clusters
+                continue;
+            size_t idx = pos->second.first;
+            recHitEnergy_.at(idx) -= rh_energycopy.at(idx) * pos->second.second * haf.second;
+            if(recHitEnergy_.at(idx)<0)
+                recHitEnergy_.at(idx)=0;
+        }
+    }
+
+    //simclusters are gone and also their energy is gone
+}
 
 void NTupleWindow::fillTiclAssignment(){//last
 

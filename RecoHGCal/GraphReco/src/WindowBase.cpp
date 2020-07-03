@@ -50,6 +50,7 @@ void WindowBase::clear() {
     recHits.clear();
     layerClusters_.clear();
     simClusters_.clear();
+    badSimClusters_.clear();
     ticltracksters_.clear();
 }
 

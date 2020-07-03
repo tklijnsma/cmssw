@@ -26,14 +26,15 @@ WindowNTupler = cms.EDAnalyzer("WindowNTupler",
     #simClusters = cms.InputTag("mix", "RealisticCaloTruth"),
     simClusters = cms.InputTag("mix", "MergedCaloTruth"),
     
+    removeFrameSimclusters=cms.bool(True),
     
     minEta=cms.double(1.6),
-    maxEta=cms.double(3.0),
+    maxEta=cms.double(3.1),
     # window size in phi and eta
     etaFrameWidth=cms.double(0.1),
     phiFrameWidth=cms.double(0.1),
     # overlap in phi and eta
-    nEtaSegments=cms.uint32(3),
-    nPhiSegments=cms.uint32(3),
+    nEtaSegments=cms.uint32(2),
+    nPhiSegments=cms.uint32(2),
     # names of the input and output tensors
 )

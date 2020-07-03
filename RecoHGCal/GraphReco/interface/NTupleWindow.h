@@ -48,6 +48,7 @@ private:
     void calculateSimclusterFeatures();
     void calculateTruthFractions();
     void fillTruthAssignment();
+    void cleanSimclusters();
 
 
     //temporary for (layer cluster) fraction calculation. detID to hit index and fraction
