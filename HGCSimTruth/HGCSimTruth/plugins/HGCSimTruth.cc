@@ -272,14 +272,19 @@ void HGCTruthProducer::determineSimClusterGroups(const SimClusterCollection& sim
   // clusters in the HCal barrel are copied unchanged
   std::vector<int> scIndices;
   for (int iSC = 0; iSC < nSimClusters; iSC++) {
-    auto absEta = fabs(simClusters[iSC].eta());
-    if (absEta >= minEta_ && absEta <= maxEta_) {
+      /*
+       * Note: we cannot exclude simclusters by eta here, because some of them have wrong information.
+       *       If we remove those, their hits will be wrongly labelled as noise later.
+       */
+
+   // auto absEta = fabs(simClusters[iSC].impactPoint().eta() );
+    //if (absEta == absEta && absEta >= minEta_ && absEta <= maxEta_) {
       // cluster located in HGCal, store the index for treatment downstream
       scIndices.push_back(iSC);
-    } else {
+    //} else {
       // cluster located in HCal, only store a non-physical radius
       (*radii)[iSC] = -1.;
-    }
+   // }
   }
 
   // the number of sim clusters in the HGCal
