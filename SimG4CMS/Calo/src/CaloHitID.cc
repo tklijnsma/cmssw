@@ -11,12 +11,19 @@ CaloHitID::CaloHitID(uint32_t unitID, double timeSlice, int trackID, uint16_t de
   setID(unitID, timeSlice, trackID, depth);
 }
 
+// Constructor with a secondary track ID
+CaloHitID::CaloHitID(uint32_t unitID, double timeSlice, int trackID, int secondaryTrackID, uint16_t depth, float tSlice, bool ignoreTkID)
+    : timeSliceUnit(tSlice), ignoreTrackID(ignoreTkID) {
+  setID(unitID, timeSlice, trackID, secondaryTrackID, depth);
+}
+
 CaloHitID::CaloHitID(float tSlice, bool ignoreTkID) : timeSliceUnit(tSlice), ignoreTrackID(ignoreTkID) { reset(); }
 
 CaloHitID::CaloHitID(const CaloHitID& id) {
   theUnitID = id.theUnitID;
   theTimeSlice = id.theTimeSlice;
   theTrackID = id.theTrackID;
+  theSecondaryTrackID = id.theSecondaryTrackID;
   theTimeSliceID = id.theTimeSliceID;
   theDepth = id.theDepth;
   timeSliceUnit = id.timeSliceUnit;
@@ -27,6 +34,7 @@ const CaloHitID& CaloHitID::operator=(const CaloHitID& id) {
   theUnitID = id.theUnitID;
   theTimeSlice = id.theTimeSlice;
   theTrackID = id.theTrackID;
+  theSecondaryTrackID = id.theSecondaryTrackID;
   theTimeSliceID = id.theTimeSliceID;
   theDepth = id.theDepth;
   timeSliceUnit = id.timeSliceUnit;
@@ -41,6 +49,15 @@ void CaloHitID::setID(uint32_t unitID, double timeSlice, int trackID, uint16_t d
   theUnitID = unitID;
   theTimeSlice = timeSlice;
   theTrackID = trackID;
+  theTimeSliceID = (int)(theTimeSlice / timeSliceUnit);
+  theDepth = depth;
+}
+
+void CaloHitID::setID(uint32_t unitID, double timeSlice, int trackID, int secondaryTrackID, uint16_t depth) {
+  theUnitID = unitID;
+  theTimeSlice = timeSlice;
+  theTrackID = trackID;
+  theSecondaryTrackID = secondaryTrackID;
   theTimeSliceID = (int)(theTimeSlice / timeSliceUnit);
   theDepth = depth;
 }

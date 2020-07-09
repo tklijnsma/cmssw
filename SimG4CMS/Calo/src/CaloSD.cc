@@ -136,9 +136,11 @@ G4bool CaloSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   uint16_t depth = getDepth(aStep);
 
   double time = theTrack->GetGlobalTime() / nanosecond;
-  int primaryID = getTrackID(theTrack);
+  // boolean to ignore a possible fineCaloID flag; primary gets to be the parent and secondary is fineCalo
+  int primaryID = getTrackID(theTrack, true);
+  int secondaryID = getTrackID(theTrack, false);
   if (unitID > 0) {
-    currentID.setID(unitID, time, primaryID, depth);
+    currentID.setID(unitID, time, primaryID, secondaryID, depth);
   } else {
     if (aStep->GetTotalEnergyDeposit() > 0.0) {
       const G4TouchableHistory* touch = static_cast<const G4TouchableHistory*>(theTrack->GetTouchable());
@@ -206,9 +208,10 @@ bool CaloSD::ProcessHits(G4GFlashSpot* aSpot, G4TouchableHistory*) {
 
   if (unitID > 0) {
     double time = 0;
-    int primaryID = getTrackID(track);
+    int primaryID = getTrackID(track, true);
+    int secondaryID = getTrackID(track, false);
     uint16_t depth = getDepth(&fFakeStep);
-    currentID.setID(unitID, time, primaryID, depth);
+    currentID.setID(unitID, time, primaryID, secondaryID, depth);
 #ifdef EDM_ML_DEBUG
     edm::LogVerbatim("CaloSim") << "CaloSD:: GetSpotInfo for Unit 0x" << std::hex << currentID.unitID() << std::dec
                                 << " Edeposit = " << edepositEM << " " << edepositHAD;
@@ -571,14 +574,19 @@ void CaloSD::initEvent(const BeginOfEvent*) {}
 void CaloSD::endEvent() {}
 
 int CaloSD::getTrackID(const G4Track* aTrack) {
+  return CaloSD::getTrackID(aTrack, false);
+  }
+
+int CaloSD::getTrackID(const G4Track* aTrack, bool ignoreFineCalo) {
   int primaryID = 0;
   forceSave = false;
   TrackInformation* trkInfo = cmsTrackInformation(aTrack);
   if (trkInfo) {
-    primaryID = (useFineCaloID_) ? trkInfo->getIDfineCalo() : trkInfo->getIDonCaloSurface();
+    primaryID = (useFineCaloID_ && !ignoreFineCalo) ? trkInfo->getIDfineCalo() : trkInfo->getIDonCaloSurface();
 #ifdef EDM_ML_DEBUG
     edm::LogVerbatim("CaloSim") << "Track ID: " << trkInfo->getIDfineCalo() << ":" << trkInfo->getIDonCaloSurface()
-                                << ":" << aTrack->GetTrackID() << ":" << primaryID;
+                                << ":" << aTrack->GetTrackID() << ":" << primaryID
+                                << (ignoreFineCalo ? " (ignoring useFineCaloID_)" : "");
 #endif
   } else {
     primaryID = aTrack->GetTrackID();
@@ -647,6 +655,7 @@ void CaloSD::storeHit(CaloG4Hit* hit) {
 
 bool CaloSD::saveHit(CaloG4Hit* aHit) {
   int tkID;
+  int secondaryTkID;
   bool ok = true;
   if (m_trackManager) {
     tkID = m_trackManager->giveMotherNeeded(aHit->getTrackID());
@@ -657,8 +666,14 @@ bool CaloSD::saveHit(CaloG4Hit* aHit) {
         ok = false;
       }
     }
+    secondaryTkID = m_trackManager->giveMotherNeeded(aHit->getSecondaryTrackID());
+    if (secondaryTkID == 0) {
+      if (m_trackManager->trackExists(aHit->getSecondaryTrackID()))
+        secondaryTkID = (aHit->getSecondaryTrackID());
+    }
   } else {
     tkID = aHit->getTrackID();
+    secondaryTkID = aHit->getSecondaryTrackID();
     ok = false;
   }
 #ifdef EDM_ML_DEBUG
@@ -671,7 +686,7 @@ bool CaloSD::saveHit(CaloG4Hit* aHit) {
   if (corrTOFBeam)
     time += correctT;
   slave.get()->processHits(
-      aHit->getUnitID(), aHit->getEM() / CLHEP::GeV, aHit->getHadr() / CLHEP::GeV, time, tkID, aHit->getDepth());
+      aHit->getUnitID(), aHit->getEM() / CLHEP::GeV, aHit->getHadr() / CLHEP::GeV, time, tkID, secondaryTkID, aHit->getDepth());
 #ifdef EDM_ML_DEBUG
   edm::LogVerbatim("CaloSim") << "CaloSD: Store Hit at " << std::hex << aHit->getUnitID() << std::dec << " "
                               << aHit->getDepth() << " due to " << tkID << " in time " << time << " of energy "

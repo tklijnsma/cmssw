@@ -62,6 +62,7 @@ public:
   void setIncidentEnergy(double e) { theIncidentEnergy = e; }
 
   int getTrackID() const { return hitID.trackID(); }
+  int getSecondaryTrackID() const { return hitID.secondaryTrackID(); }
   uint32_t getUnitID() const { return hitID.unitID(); }
   double getTimeSlice() const { return hitID.timeSlice(); }
   int getTimeSliceID() const { return hitID.timeSliceID(); }
