@@ -34,6 +34,7 @@ CaloTrkProcessing::CaloTrkProcessing(const std::string& name,
   eMin_ = m_p.getParameter<double>("EminTrack") * CLHEP::MeV;
   putHistory_ = m_p.getParameter<bool>("PutHistory");
   doFineCalo_ = m_p.getParameter<bool>("DoFineCalo");
+  saveAllCaloSimTracks_ = m_p.getParameter<bool>("SaveAllCaloSimTracks");
   eMinFine_ = m_p.getParameter<double>("EminFineTrack") * CLHEP::MeV;
   eMinFinePhoton_ = m_p.getParameter<double>("EminFinePhoton") * CLHEP::MeV;
 
@@ -258,6 +259,11 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
                                   << " to be put in history";
 #endif
     }
+  }
+  if (saveAllCaloSimTracks_ && (!trkInfo->isInHistory())) {
+    // SAVES ALL SIMTRACKS
+    trkInfo->putInHistory();
+    trkInfo->setIDfineCalo(id);
   }
 }
 

@@ -354,6 +354,7 @@ g4SimHits = cms.EDProducer("OscarMTProducer",
         EminTrack  = cms.double(0.01),
         PutHistory = cms.bool(False),
         DoFineCalo = cms.bool(False),
+        SaveAllCaloSimTracks = cms.bool(False),
         EminFineTrack = cms.double(10000.0),
         EminFinePhoton = cms.double(5000.0)
     ),
