@@ -23,6 +23,7 @@ SimCluster::SimCluster(const SimTrack &simtrk) {
 
   theMomentum_.SetPxPyPzE(
       simtrk.momentum().px(), simtrk.momentum().py(), simtrk.momentum().pz(), simtrk.momentum().E());
+  pdgId_ = simtrk.type();
 }
 
 SimCluster::SimCluster(EncodedEventId eventID, uint32_t particleID) {
