@@ -33,7 +33,7 @@ std::vector<float>               * NTupleWindow::sp_truthHitAssignedY_=0;
 std::vector<float>               * NTupleWindow::sp_truthHitAssignedZ_=0;
 std::vector<float>               * NTupleWindow::sp_truthHitAssignedEta_=0;
 std::vector<float>               * NTupleWindow::sp_truthHitAssignedPhi_=0;
-std::vector<float>               * NTupleWindow::sp_truthHitAssignedR_=0;
+std::vector<float>               * NTupleWindow::sp_truthHitAssignedT_=0;
 std::vector<std::vector<int> >   * NTupleWindow::sp_truthHitAssignedPIDs_=0;
 std::vector<float>               * NTupleWindow::sp_truthHitAssignedInner_=0;
 
@@ -109,7 +109,7 @@ void NTupleWindow::createTreeBranches(TTree* t){
     t->Branch("truthHitAssignedZ", &sp_truthHitAssignedZ_);
     t->Branch("truthHitAssignedEta", &sp_truthHitAssignedEta_);
     t->Branch("truthHitAssignedPhi", &sp_truthHitAssignedPhi_);
-    t->Branch("truthHitAssignedR", &sp_truthHitAssignedR_);
+    t->Branch("truthHitAssignedT", &sp_truthHitAssignedT_);
     t->Branch("truthHitAssignedPIDs", &sp_truthHitAssignedPIDs_);
     t->Branch("truthHitAssignedInner", &sp_truthHitAssignedInner_);
     t->Branch("truthHitAssignedDirX", &sp_truthHitAssignedDirX_);
@@ -204,7 +204,7 @@ void NTupleWindow::assignTreePointers()  {
     sp_truthHitAssignedZ_ = &truthHitAssignedZ_;
     sp_truthHitAssignedEta_ = &truthHitAssignedEta_;
     sp_truthHitAssignedPhi_ = &truthHitAssignedPhi_;
-    sp_truthHitAssignedR_ = &truthHitAssignedR_;
+    sp_truthHitAssignedT_ = &truthHitAssignedT_;
     sp_truthHitAssignedPIDs_ = &truthHitAssignedPIDs_;
     sp_truthHitAssignedInner_ = &truthHitAssignedInner_;
     sp_truthHitAssignedDirX_ = &truthHitAssignedDirX_;
@@ -271,7 +271,7 @@ void NTupleWindow::clear(){
     truthHitAssignedZ_.clear();
     truthHitAssignedEta_.clear();
     truthHitAssignedPhi_.clear();
-    truthHitAssignedR_.clear();
+    truthHitAssignedT_.clear();
     truthHitAssignedPIDs_.clear();
     truthHitAssignedInner_.clear();
     truthHitAssignedDirX_.clear();
@@ -346,11 +346,6 @@ void NTupleWindow::fillTruthArrays(){
     calculateTruthFractions();
     fillTruthAssignment();
 
-    DEBUGPRINT(getCenterEta());
-    DEBUGPRINT(getCenterPhi());
-    DEBUGPRINT(truthHitFractions_.size());
-    DEBUGPRINT(hitFeatures_.size());
-    DEBUGPRINT(truthSimclusterIdx_.size());
 }
 
 void NTupleWindow::createDetIDHitAssociation(){
@@ -502,7 +497,7 @@ void NTupleWindow::fillTruthAssignment(){
     truthHitAssignedZ_.resize(truthHitFractions_.size());
     truthHitAssignedEta_.resize(truthHitFractions_.size());
     truthHitAssignedPhi_.resize(truthHitFractions_.size());
-    truthHitAssignedR_.resize(truthHitFractions_.size());
+    truthHitAssignedT_.resize(truthHitFractions_.size());
     truthHitAssignedPIDs_.resize(truthHitFractions_.size());
     truthHitAssignedInner_.resize(truthHitFractions_.size());
     truthHitAssignedDirX_.resize(truthHitFractions_.size());
@@ -537,7 +532,7 @@ void NTupleWindow::fillTruthAssignment(){
         truthHitAssignedZ_.at(i_hit) = truthSimclusterZ_.at(maxfrac_idx);
         truthHitAssignedEta_.at(i_hit) = truthSimclusterEta_.at(maxfrac_idx);
         truthHitAssignedPhi_.at(i_hit) = truthSimclusterPhi_.at(maxfrac_idx);
-        truthHitAssignedR_.at(i_hit) = truthSimclusterR_.at(maxfrac_idx);
+        truthHitAssignedT_.at(i_hit) = truthSimclusterT_.at(maxfrac_idx);
         truthHitAssignedPIDs_.at(i_hit) = truthSimclusterPIDs_.at(maxfrac_idx);
         truthHitAssignedDirX_.at(i_hit) = truthSimclusterDirX_.at(maxfrac_idx);
         truthHitAssignedDirY_.at(i_hit) = truthSimclusterDirY_.at(maxfrac_idx);

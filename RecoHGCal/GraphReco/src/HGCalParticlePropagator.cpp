@@ -9,6 +9,8 @@
 HGCalParticlePropagator::~HGCalParticlePropagator(){
     if(rkprop_)
         delete rkprop_;
+
+    std::cout << "n propagated "<< n_propagated_ << " n failed "<< n_failed_ << std::endl;
 }
 
 void HGCalParticlePropagator::setEventSetup(const edm::EventSetup &es){
@@ -57,77 +59,77 @@ void HGCalParticlePropagator::propagate(math::XYZTLorentzVectorF& point, math::X
     typedef TrajectoryStateOnSurface TSOS;
     zpos trackz = posZ;
     if(momentum.z()<0) trackz = negZ;
+    const double caloz = trackz == posZ ? frontz_ : backz_;
+
+    bool failed=true;
+
+    n_propagated_++;
+
+    const double c = 2.99792458e10; //cm/s
+    double betazc = momentum.Beta() * momentum.z()/momentum.P() * c;
+
+
+
+    double zdist = caloz - point.z();
+    double timeprop = zdist/betazc;
+
 
     if(!charge){
-        auto normmom = momentum / std::sqrt(momentum.Vect().mag2());
-        normmom /= fabs(normmom.z());
-        double zdist = frontz_ - point.z();
-        if(trackz == negZ)
-            zdist = backz_ - point.z();
-
-        normmom *= fabs(zdist);
-        //time is missing, but trivial
-        float timedelay=0;
+        auto normmom = momentum / momentum.z();
+        //figure out target
+        normmom *= zdist;
 
         point = math::XYZTLorentzVectorF(normmom.x()+point.x(),
-                            normmom.y()+point.y(),
-                            normmom.z()+point.z(),
-                            timedelay+point.T());
-        return;
+                normmom.y()+point.y(),
+                normmom.z()+point.z(),
+                timeprop+point.T());
+
+        failed=false;
     }
+    else{
+        const MagneticField * field=bField_.product();
+        auto & RKprop = rkprop_->propagator;
 
-    const MagneticField * field=bField_.product();
-    auto & RKprop = rkprop_->propagator;
+        GlobalPoint gpoint(point.x(),point.y(),point.z());
+        GlobalVector gmomentum(momentum.x(),momentum.y(),momentum.z());
 
-    GlobalPoint gpoint(point.x(),point.y(),point.z());
-    GlobalVector gmomentum(momentum.x(),momentum.y(),momentum.z());
+        if(fabs(point.z())>fabs(caloz))
+            gmomentum *= -1;
 
-    TSOS startingState( GlobalTrajectoryParameters(gpoint,
-            gmomentum, charge, field));
+        TSOS startingState( GlobalTrajectoryParameters(gpoint,
+                gmomentum, charge, field));
 
-    TSOS propState = RKprop.propagate( startingState, frontFaces_[trackz]->surface());
+        TSOS propState = RKprop.propagate( startingState, frontFaces_[trackz]->surface());
 
-    if (propState.isValid()){
-        auto proppoint = propState.globalPosition();
-        auto propmomentum = propState.globalMomentum();
+        if (propState.isValid()){
+            auto proppoint = propState.globalPosition();
+            auto propmomentum = propState.globalMomentum();
 
-        //time is missing, but almost trivial
-        float timedelay=0;
 
-        point = math::XYZTLorentzVectorF(proppoint.x(),
-                proppoint.y(),
-                proppoint.z(),
-                timedelay+point.T());
+            point = math::XYZTLorentzVectorF(proppoint.x(),
+                    proppoint.y(),
+                    proppoint.z(),
+                    timeprop+point.T());
 
-        momentum = math::XYZTLorentzVectorF(propmomentum.x(),
-                propmomentum.y(),
-                propmomentum.z(),
-                momentum.T());
+            momentum = math::XYZTLorentzVectorF(propmomentum.x(),
+                    propmomentum.y(),
+                    propmomentum.z(),
+                    momentum.T());
 
+            failed=false;
+        }
     }
-
-    //RawParticle part(momentum.x(),momentum.y(),momentum.z(),momentum.t(), charge);
-    //part.setVertex(point);
-    //
-    //PropagatorWithMaterial (PropagationDirection dir, const float mass,
-    //             const MagneticField * mf=nullptr,const float maxDPhi=1.6,
-    //             bool useRungeKutta=false, float ptMin=-1.,bool useOldGeoPropLogic=true);
-    //
-    // ~
-    //
-    //ParticlePropagator p(part,
-    //                     120.,
-    //                     hgcalz_,
-    //                     fieldMap_,
-    //                     0 ,//const RandomEngineAndDistribution* engine,
-    //                     0) ;//const HepPDT::ParticleDataTable* table)
-    //
-    //if(!p.getSuccess())
-    //    throw cms::Exception("Propagation failed");
-    //auto propd = p.propagated();
-    //
-    //momentum = propd.particle().momentum();
-    //point = propd.particle().vertex();
+    if(fabs(point.z()) - fabs(getHGCalZ()) > 0.01)
+        failed=true;
+    if(failed){
+        std::cout << "\n prop failed for point " << point <<
+                ", eta: " << point.Eta() << ", phi: " << point.Phi() <<
+                " charge " << charge <<  std::endl;
+        std::cout << "pos " << trackz << " calo z " << caloz <<" ";
+        std::cout << "propagate z " << point.z() << " with momentum z " << momentum.z() << " and betaz " << betazc << std::endl;
+        std::cout << "distance " << zdist << " time to travel " << timeprop << std::endl;
+        n_failed_++;
+    }
 }
 
 double HGCalParticlePropagator::getHGCalZ()const{

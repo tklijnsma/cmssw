@@ -23,6 +23,9 @@ public:
 
   void recalculatePosition(SimCluster& cluster, const double& assigned_time) const;
 
+  //has at least one hit in the hgcal
+  bool isHGCal(const SimCluster& cluster)const;
+
   void setRechitTools(const hgcal::RecHitTools& rht) { recHitTools_ = &rht; }
 
   void setRechitVector(const std::vector<const HGCRecHit*>& rhv) { allrechits_ = &rhv; }

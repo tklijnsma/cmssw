@@ -42,6 +42,7 @@
 
 #include "../interface/NTupleWindow.h"
 #include "DataFormats/ParticleFlowReco/interface/HGCalMultiCluster.h"
+#include "HGCSimTruth/HGCSimTruth/interface/SimClusterTools.h"
 #include <algorithm>
 //
 // class declaration
@@ -84,6 +85,7 @@ class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one:
 
       std::vector<NTupleWindow> windows_;
       hgcal::RecHitTools recHitTools_;
+      SimClusterTools sctools_;
       HGCalTrackPropagator trackprop_;
       edm::Service<TFileService> fs_;
       TTree * outTree_;
@@ -221,12 +223,6 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
 
-   //DEBUG
-   DEBUGPRINT(intracks.size());
-   DEBUGPRINT(proptracks.size());
-   DEBUGPRINT(allrechits.size());
-   DEBUGPRINT(inlayerclusters.size());
-   DEBUGPRINT(insimclusters.size());
 
    std::vector<size_t> filledtracksters(tracksters.size(),0);
    std::vector<size_t> filledtrack(proptracks.size(),0);
@@ -264,7 +260,7 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
        for(size_t it=0;it<insimclusters.size();it++) {
            if(filledsimclusters.at(it)>3) continue;
-           if(window.maybeAddSimCluster(insimclusters.at(it)))
+           if(window.maybeAddSimCluster(insimclusters.at(it),sctools_.isHGCal(insimclusters.at(it)) ))
                filledsimclusters.at(it)++;
        }
 
@@ -305,6 +301,7 @@ WindowNTupler::endJob()
 void WindowNTupler::beginRun(edm::Run const &iEvent, edm::EventSetup const &es) {
   recHitTools_.getEventSetup(es);
   trackprop_ .getEventSetup(es);
+  sctools_.setRechitTools(recHitTools_);
 }
 void WindowNTupler::endRun(edm::Run const &iEvent, edm::EventSetup const &es) {
 

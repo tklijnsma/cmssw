@@ -6,6 +6,7 @@
 <use name="RecoLocalCalo/HGCalRecAlgos" />
 <use name="PhysicsTools/TensorFlow" />
 <use name="SimDataFormats/CaloAnalysis" />
+<use name="HGCSimTruth/HGCSimTruth" />
 <use name="root"/>
 
 <use name="RecoHGCal/GraphReco"/>

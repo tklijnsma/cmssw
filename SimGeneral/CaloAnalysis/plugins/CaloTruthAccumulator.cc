@@ -172,11 +172,16 @@ private:
                    const T &event,
                    const edm::EventSetup &setup);
 
-  /** @brief Assigns the coordinates of the associated SimTrack. These are wrong until CMSSW Geant stepping has been fixed! */
+  /** @brief Assigns the coordinates of the associated SimTrack/Vertex.*/
   void assignSimClusterCoordinates(std::unique_ptr<SimClusterCollection> &,
                                    const std::vector<SimVertex> &,
                                    const size_t previous_simclusters);
+
+  /** @brief propagates the simcluster coordinates to the HGCal surface in case of HGCal simclusters*/
+  void propagateSimClusterCoordinates(std::unique_ptr<SimClusterCollection> &);
+
   HGCalParticlePropagator prop_;
+  SimClusterTools sctools_;
   std::map<TString, TH2D> debughistos;
 
   const std::string messageCategory_;
@@ -514,6 +519,7 @@ void CaloTruthAccumulator::initializeEvent(edm::Event const &event, edm::EventSe
   m_detIdToTotalSimEnergy.clear();
   prop_.setEventSetup(setup);
   recHitTools_.getEventSetup(setup);
+  sctools_.setRechitTools(recHitTools_);
 }
 
 /** Create handle to edm::HepMCProduct here because event.getByLabel with
@@ -586,6 +592,8 @@ void CaloTruthAccumulator::finalizeEvent(edm::Event &event, edm::EventSetup cons
         std::make_unique<std::vector<SimClusterHistory>>(simClusterHistory_);
     event.put(std::move(simClusterHistory), "MergedCaloTruth");
   }
+
+  propagateSimClusterCoordinates(output_.pSimClusters);
 
   // save the SimCluster orphan handle so we can fill the calo particles
   auto scHandle = event.put(std::move(output_.pSimClusters), "MergedCaloTruth");
@@ -814,28 +822,14 @@ void CaloTruthAccumulator::fillSimHits(std::vector<std::pair<DetId, const PCaloH
 void CaloTruthAccumulator::assignSimClusterCoordinates(std::unique_ptr<SimClusterCollection> &scs,
                                                        const std::vector<SimVertex> &vs,
                                                        const size_t previous_simclusters) {
-  std::cout << "popagate" << std::endl;
-  int misassigned = 0;
-  int totalhgcalinthisround = 0;
-  int novertex = 0;
 
-  SimClusterTools sctools;
-  sctools.setRechitTools(recHitTools_);
+
 
   for (size_t isc = previous_simclusters; isc < scs->size(); isc++) {
     auto &sc = scs->at(isc);
 
-    sctools.recalculatePosition(sc, 0);
-    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> thispos = sc.impactPoint();
-
-    // std::cout << thispos <<" "<< thispos.eta() <<std::endl;
-
-    if (fabs(thispos.z()) > prop_.getHGCalZ()) {  //inside
-      sc.setImpactMomentum(sc.p4());
-    }
-
     if (sc.g4Tracks().size()) {
-      bool try_propagation = false;
+
       const auto &t = sc.g4Tracks().at(0);
       const auto mom = t.momentum();
       math::XYZTLorentzVectorF momentum(mom.x(), mom.y(), mom.z(), mom.t());
@@ -845,40 +839,30 @@ void CaloTruthAccumulator::assignSimClusterCoordinates(std::unique_ptr<SimCluste
       } else {
         const auto &pos = vs.at(t.vertIndex()).position();
         vertex = math::XYZTLorentzVectorF(pos.x(), pos.y(), pos.z(), pos.t());
-        try_propagation = true;
       }
       sc.setImpactPoint(vertex);
       sc.setImpactMomentum(momentum);
-
-      if (try_propagation) {
-        auto oldvert = vertex;
-        prop_.propagate(vertex, momentum, t.charge());
-
-        if (fabs(vertex.eta()) > 1.6 && fabs(vertex.eta()) < 3.1) {
-
-          totalhgcalinthisround++;
-          double error = reco::deltaR(oldvert.eta(), oldvert.phi(), vertex.eta(), vertex.phi());
-          if (error > 0.04)
-            misassigned++;
-
-          debughistos["misass_vs_energy"].Fill(momentum.E(), error);
-          debughistos["misass_vs_eta"].Fill(momentum.Eta(), error);
-
-          vertex = math::XYZTLorentzVectorF(thispos.x(), thispos.y(), thispos.z(), vertex.t());
-          sc.setImpactPoint(vertex);
-          sc.setImpactMomentum(momentum);
-        }
-      } else if (fabs(thispos.Eta()) > 1.5 && fabs(thispos.Eta()) < 3.) {
-        totalhgcalinthisround++;
-      }
 
     } else {
       throw cms::Exception("Simcluster without genParticle or G4track");
     }
   }
 
-  std::cout << "misassigned " << misassigned << " of " << totalhgcalinthisround << std::endl;
-  std::cout << "novertex    " << novertex << " of " << totalhgcalinthisround << std::endl;
+}
+
+void CaloTruthAccumulator::propagateSimClusterCoordinates(std::unique_ptr<SimClusterCollection> & sc_coll){
+    for(auto& sc : *sc_coll){
+        if(!sctools_.isHGCal(sc))
+            continue;
+        auto vertex = sc.impactPoint();
+        auto momentum = sc.impactMomentum();
+
+        prop_.propagate(vertex, momentum, sc.g4Tracks().at(0).charge());
+
+        sc.setImpactPoint(vertex);
+        sc.setImpactMomentum(momentum);
+
+    }
 }
 
 // Register with the framework

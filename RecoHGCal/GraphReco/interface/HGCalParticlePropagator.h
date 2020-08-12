@@ -32,7 +32,7 @@ class HGCalParticlePropagator{
 public:
     enum zpos{ negZ=0, posZ=1};
 
-    HGCalParticlePropagator():rkprop_(0),frontz_(0),backz_(0),setup_(false){}
+    HGCalParticlePropagator():rkprop_(0),frontz_(0),backz_(0),setup_(false),n_failed_(0),n_propagated_(0){}
     ~HGCalParticlePropagator();
     void setEventSetup(const edm::EventSetup &es);
 
@@ -45,6 +45,9 @@ private:
     double frontz_,backz_;
     std::unique_ptr<GeomDet> frontFaces_[2];
     bool setup_;
+
+    //DEBUG
+    int n_failed_,n_propagated_;
 };
 
 

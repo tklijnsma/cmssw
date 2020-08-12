@@ -6,6 +6,17 @@
  */
 
 #include "../interface/SimClusterTools.h"
+#include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/ForwardDetId/interface/ForwardSubdetector.h"
+
+#include "DataFormats/ForwardDetId/interface/HGCalDetId.h"
+#include "DataFormats/ForwardDetId/interface/HGCScintillatorDetId.h"
+#include "DataFormats/ForwardDetId/interface/HGCSiliconDetId.h"
+#include "DataFormats/HcalDetId/interface/HcalDetId.h"
+#include "Geometry/HGCalGeometry/interface/HGCalGeometry.h"
+#include "Geometry/HcalTowerAlgo/interface/HcalGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+
 #include <cmath>
 
 void SimClusterTools::recalculatePosition(SimCluster& cluster, const double& assigned_time) const {
@@ -87,3 +98,24 @@ void SimClusterTools::recalculatePosition(SimCluster& cluster, const double& ass
 
   //std::cout << "new pos: " << cluster.impactPoint() << std::endl;
 }
+
+bool SimClusterTools::isHGCal(const SimCluster& cluster)const{
+
+    for (const auto& hitsAndEnergies : cluster.hits_and_fractions()) {
+        const DetId id = hitsAndEnergies.first;
+        bool forward = id.det() == DetId::HGCalEE
+                || id.det() == DetId::HGCalHSi
+                || id.det() == DetId::HGCalHSc
+                || (id.det() == DetId::Forward && id.subdetId() != static_cast<int>(HFNose))
+                || (id.det() == DetId::Hcal && id.subdetId() == HcalSubdetector::HcalEndcap);
+
+        if(forward)
+            return true;
+    }
+    return false;
+}
+
+
+
+
+

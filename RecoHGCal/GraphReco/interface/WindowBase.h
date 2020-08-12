@@ -107,9 +107,9 @@ public:
         return false;
     }
 
-    inline bool maybeAddSimCluster(const SimCluster& sc){
+    inline bool maybeAddSimCluster(const SimCluster& sc, bool isHGCal=true){
         //potential cuts here!
-        if (accept(sc.impactPoint().phi(),sc.impactPoint().eta())){
+        if (accept(sc.impactPoint().phi(),sc.impactPoint().eta()) && isHGCal){
             bool isinner=isInner(sc.impactPoint().eta(),sc.impactPoint().phi());
             if(!removeFrameSimcluster_){
                 simClusters_.push_back(&sc);

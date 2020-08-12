@@ -83,7 +83,7 @@ private:
     std::vector<float>               truthHitAssignedZ_;
     std::vector<float>               truthHitAssignedEta_;
     std::vector<float>               truthHitAssignedPhi_;
-    std::vector<float>               truthHitAssignedR_;
+    std::vector<float>               truthHitAssignedT_;
     //truth energy of assigned simcluster
     std::vector<std::vector<int> >   truthHitAssignedPIDs_;
     std::vector<float>               truthHitAssignedInner_;
@@ -145,7 +145,7 @@ private:
     static std::vector<float>               * sp_truthHitAssignedZ_;
     static std::vector<float>               * sp_truthHitAssignedEta_;
     static std::vector<float>               * sp_truthHitAssignedPhi_;
-    static std::vector<float>               * sp_truthHitAssignedR_;
+    static std::vector<float>               * sp_truthHitAssignedT_;
     static std::vector<std::vector<int> >   * sp_truthHitAssignedPIDs_;
     static std::vector<float>               * sp_truthHitAssignedInner_;
     static std::vector<float>               * sp_truthHitAssignedDirX_;
