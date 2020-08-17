@@ -259,7 +259,7 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        }
 
        for(size_t it=0;it<insimclusters.size();it++) {
-           if(filledsimclusters.at(it)>3) continue;
+           //not here to catch some strays if(filledsimclusters.at(it)>3) continue;
            if(window.maybeAddSimCluster(insimclusters.at(it),sctools_.isHGCal(insimclusters.at(it)) ))
                filledsimclusters.at(it)++;
        }
