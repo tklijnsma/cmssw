@@ -59,10 +59,15 @@ void TrackingParticleSimClusterAssociationProducer::produce(edm::StreamID, edm::
   edm::Handle<TrackingParticleCollection> tpCollection;
   iEvent.getByToken(tpCollectionToken_, tpCollection);
 
-  edm::Handle<SimClusterCollection> simclusCollection;
-  iEvent.getByToken(scCollectionToken_, simclusCollection);
+  edm::Handle<SimClusterCollection> scCollection;
+  iEvent.getByToken(scCollectionToken_, scCollection);
 
-  auto out = std::make_unique<TrackingParticleToSimCluster>();
+  auto out = std::make_unique<TrackingParticleToSimCluster>(tpCollection, scCollection);
+  TrackingParticleRef tp(tpCollection, 0);
+  SimClusterRef sc(scCollection, 0);
+  std::pair<SimClusterRef, float> scVal(sc, 1.);
+  out->insert(tp, scVal);
+
   std::cout << "Trying to make associations\n";
 
   iEvent.put(std::move(out));
