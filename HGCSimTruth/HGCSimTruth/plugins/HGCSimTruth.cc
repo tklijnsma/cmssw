@@ -568,22 +568,27 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
 
     // get a vector of all sim tracks, also store the total energy
     ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedmomentum;
+    std::vector<SimTrack> mergedSCTracks;
     for (const int& iSC : group) {
       // there is currently only one track per sim clusters
       combinedmomentum += simClusters[iSC].impactMomentum();
       std::cout << "pos " << iSC << ": " << simClusters[iSC].impactPoint() << " eta "
                 << simClusters[iSC].impactPoint().Eta() << " momentum " << simClusters[iSC].impactMomentum()
                 << " vertexmomentum " << simClusters[iSC].p4() << std::endl;
+      auto& scTracks = simClusters[iSC].g4Tracks();
+      mergedSCTracks.insert(mergedSCTracks.end(), scTracks.begin(), scTracks.end());
     }
+    std::sort(mergedSCTracks.begin(), mergedSCTracks.end(), [](auto& t1, auto& t2) 
+            { return t1.momentum().E() > t2.momentum().E(); });
 
-    // determine the pdg id using infos about common ancestors
-    int pdgId = 78;  // TODO (this doesn't matter for now)
+    // TODO: determine the pdg id using infos about common ancestors
+    // For now just take the PDG of the highest energy track
+    int pdgId = mergedSCTracks.front().type();  
 
     ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double>> combinedmomentumD(
         combinedmomentum.x(), combinedmomentum.y(), combinedmomentum.z(), combinedmomentum.t());
     //still needs to be added
-    SimTrack simtr(0, combinedmomentumD);
-    SimCluster newsc({simtr}, pdgId);
+    SimCluster newsc(mergedSCTracks, pdgId);
 
     newsc.setImpactMomentum(combinedmomentum);
     // create the cluster

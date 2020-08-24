@@ -20,13 +20,14 @@
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 
 #include "FWCore/Utilities/interface/EDGetToken.h"
+#include <optional>
 
 //
 // class decleration
 //
 
-typedef edm::AssociationMap<edm::OneToManyWithQuality<
-    TrackingParticleCollection, SimClusterCollection, float>> TrackingParticleToSimCluster;
+typedef edm::AssociationMap<edm::OneToMany<
+    TrackingParticleCollection, SimClusterCollection>> TrackingParticleToSimCluster;
 
 class TrackingParticleSimClusterAssociationProducer : public edm::global::EDProducer<> {
 public:
@@ -35,6 +36,8 @@ public:
 
 private:
   void produce(edm::StreamID, edm::Event &, const edm::EventSetup &) const override;
+  std::set<TrackingParticleRef> findTrackingParticleMatch(
+        std::unordered_map<unsigned int, TrackingParticleRef>& trackIdToTPRef, SimClusterRef scRef) const;
 
   edm::EDGetTokenT<TrackingParticleCollection> tpCollectionToken_;
   edm::EDGetTokenT<SimClusterCollection> scCollectionToken_;
@@ -53,6 +56,17 @@ TrackingParticleSimClusterAssociationProducer::~TrackingParticleSimClusterAssoci
 // member functions
 //
 
+std::set<TrackingParticleRef> TrackingParticleSimClusterAssociationProducer::findTrackingParticleMatch(
+        std::unordered_map<unsigned int, TrackingParticleRef>& trackIdToTPRef, SimClusterRef scRef) const {
+    std::set<TrackingParticleRef> trackingParticles;
+    for (auto& track : scRef->g4Tracks()) {
+        unsigned int trackId = track.trackId();
+        if (trackIdToTPRef.find(trackId) != trackIdToTPRef.end())
+            trackingParticles.insert(trackIdToTPRef[trackId]); 
+    }
+    return trackingParticles;
+}
+
 // ------------ method called to produce the data  ------------
 void TrackingParticleSimClusterAssociationProducer::produce(edm::StreamID, edm::Event &iEvent, const edm::EventSetup &iSetup) const {
 
@@ -63,12 +77,24 @@ void TrackingParticleSimClusterAssociationProducer::produce(edm::StreamID, edm::
   iEvent.getByToken(scCollectionToken_, scCollection);
 
   auto out = std::make_unique<TrackingParticleToSimCluster>(tpCollection, scCollection);
-  TrackingParticleRef tp(tpCollection, 0);
-  SimClusterRef sc(scCollection, 0);
-  std::pair<SimClusterRef, float> scVal(sc, 1.);
-  out->insert(tp, scVal);
+  std::unordered_map<unsigned int, TrackingParticleRef> trackIdToTPRef;
 
-  std::cout << "Trying to make associations\n";
+  for (size_t i = 0; i < tpCollection->size(); i++) {
+      TrackingParticleRef trackingParticle(tpCollection, i);
+      for (auto& track : trackingParticle->g4Tracks()) {
+          unsigned int trackId = track.trackId();
+          trackIdToTPRef[trackId] = trackingParticle;
+      }
+  }
+
+  // NOTE: not every trackingparticle will be in the association.
+  // could add empty SCs in this case, but that might be worse...
+  std::cout << "LENGTH OF SIMCLUSTERS IS " << scCollection->size() << std::endl;
+  for (size_t i = 0; i < scCollection->size(); i++) {
+      SimClusterRef simclus(scCollection, i);
+      for (auto tp : findTrackingParticleMatch(trackIdToTPRef, simclus))
+          out->insert(tp, simclus);
+  }
 
   iEvent.put(std::move(out));
 }
