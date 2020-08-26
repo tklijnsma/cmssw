@@ -25,6 +25,8 @@ WindowNTupler = cms.EDAnalyzer("WindowNTupler",
     layerClusters = cms.InputTag("hgcalLayerClusters"),
     #simClusters = cms.InputTag("mix", "RealisticCaloTruth"),
     simClusters = cms.InputTag("mix", "MergedCaloTruth"),
+    tracksToTrackingParticles = cms.InputTag("trackingParticleRecoTrackAsssociation"),
+    trackingParticleSimCluster = cms.InputTag("trackingParticleSimClusterAssociation"),
     
     removeFrameSimclusters=cms.bool(True),
     
