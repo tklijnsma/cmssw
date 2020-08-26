@@ -43,6 +43,14 @@
 #include "../interface/NTupleWindow.h"
 #include "DataFormats/ParticleFlowReco/interface/HGCalMultiCluster.h"
 #include "HGCSimTruth/HGCSimTruth/interface/SimClusterTools.h"
+
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticleFwd.h"
+
+#include "DataFormats/RecoCandidate/interface/TrackAssociation.h"
+#include "DataFormats/Common/interface/OneToMany.h"
+#include "DataFormats/Common/interface/AssociationMap.h"
+
 #include <algorithm>
 //
 // class declaration
@@ -55,6 +63,8 @@
 
 
 using reco::TrackCollection;
+typedef edm::AssociationMap<edm::OneToMany<
+    TrackingParticleCollection, SimClusterCollection>> TrackingParticleToSimCluster;
 
 class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one::SharedResources>  {
    public:
@@ -82,6 +92,9 @@ class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one:
       edm::EDGetTokenT<reco::CaloClusterCollection> layerClustersToken_;
       edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
       std::vector<edm::EDGetTokenT<HGCRecHitCollection> > rechitsTokens_;
+      edm::EDGetTokenT<TrackingParticleCollection> trackingPartToken_;
+      edm::EDGetTokenT<reco::RecoToSimCollection> trackToTrackingPartToken_;
+      edm::EDGetTokenT<TrackingParticleToSimCluster> trackingPartToSimClusToken_;
 
       std::vector<NTupleWindow> windows_;
       hgcal::RecHitTools recHitTools_;
@@ -145,6 +158,9 @@ WindowNTupler::WindowNTupler(const edm::ParameterSet& config)
   tracksToken_(consumes<TrackCollection>(config.getParameter<edm::InputTag>("tracks"))),
   layerClustersToken_(consumes<reco::CaloClusterCollection>(config.getParameter<edm::InputTag>("layerClusters"))),
   simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))),
+  trackingPartToken_(consumes<TrackingParticleCollection>(config.getParameter<edm::InputTag>("trackingParticles"))),
+  trackToTrackingPartToken_(consumes<reco::RecoToSimCollection>(config.getParameter<edm::InputTag>("tracksToTrackingParticles"))),
+  trackingPartToSimClusToken_(consumes<TrackingParticleToSimCluster>(config.getParameter<edm::InputTag>("trackingParticleSimCluster"))),
   outTree_(nullptr)
 
 /* ... */
@@ -203,10 +219,26 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
    //get and propagate tracks
    std::vector<TrackWithHGCalPos> proptracks;
-   auto intracks = iEvent.get(tracksToken_);
-   for(const auto& t: intracks){
-       if(fabs(t.eta())< 1.5 || fabs(t.eta())>3.0) continue; //just use potentially interesting ones
-       proptracks.push_back(trackprop_.propagateObject(t));
+   TrackingParticleRefVector trackingParticles;
+   edm::Handle<edm::View<reco::Track>> tracksHandle;
+   //edm::Handle<reco::TrackCollection> tracksHandle;
+   iEvent.getByToken(trackToTrackingPartToken_, tracksHandle);
+   std::vector trackTruthIdx(tracksHandle->size(), unsigned int);
+   for(size_t i = 0; i < tracksHandle->size(); i++){
+       edm::RefToBase<reco::Track> track(tracksHandle, i);
+       if(fabs(track->eta())< 1.5 || fabs(track->eta())>3.0) 
+           continue; //just use potentially interesting ones
+       proptracks.push_back(trackprop_.propagateObject(*track));
+       // I know try/catch is a bit ugly, but I don't know if there is another
+       // mechanism to see if the track has matched tracking particle. This is 
+       // what they do in https://github.com/cms-sw/cmssw/blob/master/SimTracker/TrackAssociation/test/testTrackAssociator.cc#L64-L78
+       try {
+           TrackingParticleRef trackingPart = tracksToTrackingParticles[t]; 
+       }
+       catch {
+           // Mark as fake
+           trackTruthId.at(i, 0);
+       } 
    }
 
    //get rechits, get positions and merge collections

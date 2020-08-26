@@ -20,7 +20,7 @@
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 
 #include "FWCore/Utilities/interface/EDGetToken.h"
-#include <optional>
+#include <set>
 
 //
 // class decleration
@@ -89,7 +89,6 @@ void TrackingParticleSimClusterAssociationProducer::produce(edm::StreamID, edm::
 
   // NOTE: not every trackingparticle will be in the association.
   // could add empty SCs in this case, but that might be worse...
-  std::cout << "LENGTH OF SIMCLUSTERS IS " << scCollection->size() << std::endl;
   for (size_t i = 0; i < scCollection->size(); i++) {
       SimClusterRef simclus(scCollection, i);
       for (auto tp : findTrackingParticleMatch(trackIdToTPRef, simclus))
