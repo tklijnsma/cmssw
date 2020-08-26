@@ -88,7 +88,7 @@ class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one:
 
       // ----------member data ---------------------------
       edm::EDGetTokenT<std::vector<ticl::Trackster>> tracksters_token_;
-      edm::EDGetTokenT<TrackCollection> tracksToken_;
+      edm::EDGetTokenT<edm::View<reco::Track>> tracksToken_;
       edm::EDGetTokenT<reco::CaloClusterCollection> layerClustersToken_;
       edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
       std::vector<edm::EDGetTokenT<HGCRecHitCollection> > rechitsTokens_;
@@ -155,7 +155,7 @@ Tracksterwithpos_and_energy WindowNTupler::assignPositionAndEnergy(const ticl::T
 WindowNTupler::WindowNTupler(const edm::ParameterSet& config)
  :
   tracksters_token_(consumes<std::vector<ticl::Trackster>>(config.getParameter<edm::InputTag>("tracksters"))),
-  tracksToken_(consumes<TrackCollection>(config.getParameter<edm::InputTag>("tracks"))),
+  tracksToken_(consumes<edm::View<reco::Track>>(config.getParameter<edm::InputTag>("tracks"))),
   layerClustersToken_(consumes<reco::CaloClusterCollection>(config.getParameter<edm::InputTag>("layerClusters"))),
   simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))),
   //trackingPartToken_(consumes<TrackingParticleCollection>(config.getParameter<edm::InputTag>("trackingParticles"))),
