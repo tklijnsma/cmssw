@@ -567,12 +567,13 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
     });
 
     // get a vector of all sim tracks, also store the total energy
-    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedmomentum = 0;
-    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedimpact = 0;
+    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedmomentum ;
+    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedimpact;
     std::vector<SimTrack> mergedSCTracks;
 
     for (const int& iSC : group) {
       // there is currently only one track per sim clusters
+      float E = simClusters[iSC].impactMomentum().E();
       combinedmomentum += simClusters[iSC].impactMomentum();
       combinedimpact += simClusters[iSC].impactPoint() * E;
 
