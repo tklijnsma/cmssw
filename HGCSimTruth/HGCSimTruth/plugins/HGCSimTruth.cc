@@ -567,17 +567,22 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
     });
 
     // get a vector of all sim tracks, also store the total energy
-    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedmomentum;
+    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedmomentum = 0;
+    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedimpact = 0;
     std::vector<SimTrack> mergedSCTracks;
+
     for (const int& iSC : group) {
       // there is currently only one track per sim clusters
       combinedmomentum += simClusters[iSC].impactMomentum();
+      combinedimpact += simClusters[iSC].impactPoint() * E;
+
       std::cout << "pos " << iSC << ": " << simClusters[iSC].impactPoint() << " eta "
                 << simClusters[iSC].impactPoint().Eta() << " momentum " << simClusters[iSC].impactMomentum()
                 << " vertexmomentum " << simClusters[iSC].p4() << std::endl;
       auto& scTracks = simClusters[iSC].g4Tracks();
       mergedSCTracks.insert(mergedSCTracks.end(), scTracks.begin(), scTracks.end());
     }
+
     std::sort(mergedSCTracks.begin(), mergedSCTracks.end(), [](auto& t1, auto& t2) 
             { return t1.momentum().E() > t2.momentum().E(); });
 
@@ -591,6 +596,7 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
     SimCluster newsc(mergedSCTracks, pdgId);
 
     newsc.setImpactMomentum(combinedmomentum);
+    newsc.setImpactPoint(combinedimpact/combinedmomentum.E());
     // create the cluster
     mergedSimClusters->emplace_back(newsc);
     auto& cluster = mergedSimClusters->back();
@@ -600,34 +606,16 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
     // therefore, use the default addRecHitAndFraction method for the first cluster, and then
     // loop over the remaining ones to invoke the slower but necessary addDuplicateRecHitAndFraction
 
-    double combined_time = 0, totalenergy = 0;
     for (const auto& hf : simClusters[group[0]].hits_and_fractions()) {
       cluster.addRecHitAndFraction(hf.first, hf.second);
-      double en = simClusters[group[0]].impactMomentum().E();  //energy weighted time
-      totalenergy += en;
-      combined_time += simClusters[group[0]].impactPoint().T() * en;
     }
     for (int iiSC = 1; iiSC < (int)group.size(); iiSC++) {
       int iSC = group[iiSC];
       for (const auto& hf : simClusters[iSC].hits_and_fractions()) {
         cluster.addDuplicateRecHitAndFraction(hf.first, hf.second);
       }
-      double en = simClusters[iSC].impactMomentum().E();  //energy weighted time
-      totalenergy += en;
-      combined_time += simClusters[iSC].impactPoint().T() * en;
     }
-    combined_time /= totalenergy;
-    //recalculate entry position at first hit
-    SimClusterTools sctools;
-    sctools.setRechitTools(recHitTools_);
-    sctools.setRechitVector(rechits);
-    sctools.setIndexMap(rh_detid_to_idx);
 
-    sctools.recalculatePosition(cluster, combined_time);
-
-    //get energy weighted center and lowest layer
-    //
-    //get lowest layer index
   }
 }
 

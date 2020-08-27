@@ -62,7 +62,7 @@ const size_t WindowBase::nTrackFeatures_=12;
 void WindowBase::fillTrackFeatures(float*& data, const TrackWithHGCalPos * t) const {
     *(data++) = t->obj->p();
     *(data++) = t->pos.eta();
-    *(data++) = reco::deltaPhi(t->pos.phi(), getCenterPhi());
+    *(data++) = t->pos.phi();
     *(data++) = t->pos.theta();
     *(data++) = t->pos.mag();
     *(data++) = t->pos.x();
@@ -78,7 +78,7 @@ const size_t WindowBase::nRechitFeatures_=12;
 void WindowBase::fillRecHitFeatures(float*& data, const HGCRecHitWithPos * recHit) const {
     *(data++) = recHit->hit->energy();
     *(data++) = recHit->pos.eta();
-    *(data++) = reco::deltaPhi(recHit->pos.phi(), getCenterPhi());
+    *(data++) = recHit->pos.phi();
     *(data++) = recHit->pos.theta();
     *(data++) = recHit->pos.mag();
     *(data++) = recHit->pos.x();
@@ -95,7 +95,7 @@ const size_t WindowBase::nLayerClusterFeatures_=12;
 void WindowBase::fillLayerClusterFeatures(float*& data, const reco::CaloCluster * cl) const {
     *(data++) = cl->energy();
     *(data++) = cl->eta();
-    *(data++) = reco::deltaPhi(cl->phi(), getCenterPhi());
+    *(data++) = cl->phi();
     *(data++) = cl->position().theta();
     *(data++) = std::sqrt(cl->position().Mag2());
     *(data++) = cl->position().x();

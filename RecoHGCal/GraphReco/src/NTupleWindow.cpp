@@ -13,7 +13,7 @@
 std::vector<std::vector<float>>* NTupleWindow::sp_hitFeatures_=0;
 std::vector<float>* NTupleWindow::sp_recHitEnergy_;
 std::vector<float>* NTupleWindow::sp_recHitEta_;
-std::vector<float>* NTupleWindow::sp_recHitRelPhi_;
+std::vector<float>* NTupleWindow::sp_recHitPhi_;
 std::vector<float>* NTupleWindow::sp_recHitTheta_;
 std::vector<float>* NTupleWindow::sp_recHitR_;
 std::vector<float>* NTupleWindow::sp_recHitX_;
@@ -86,7 +86,7 @@ void NTupleWindow::createTreeBranches(TTree* t){
     if (flattenRechitFeatures_) {
         t->Branch("recHitEnergy", &sp_recHitEnergy_);
         t->Branch("recHitEta", &sp_recHitEta_);
-        t->Branch("recHitRelPhi", &sp_recHitRelPhi_);
+        t->Branch("recHitPhi", &sp_recHitPhi_);
         t->Branch("recHitTheta", &sp_recHitTheta_);
         t->Branch("recHitR", &sp_recHitR_);
         t->Branch("recHitX", &sp_recHitX_);
@@ -163,7 +163,7 @@ void NTupleWindow::flattenRechitFeatures() {
     for (size_t i = 0; i < hitFeatures_.size(); i++) {
         recHitEnergy_.push_back(hitFeatures_[i][kEnergy]);
         recHitEta_.push_back(hitFeatures_[i][kEta]);
-        recHitRelPhi_.push_back(hitFeatures_[i][kRelPhi]);
+        recHitPhi_.push_back(hitFeatures_[i][kPhi]);
         recHitTheta_.push_back(hitFeatures_[i][kTheta]);
         recHitR_.push_back(hitFeatures_[i][kR]);
         recHitX_.push_back(hitFeatures_[i][kx]);
@@ -184,7 +184,7 @@ void NTupleWindow::assignTreePointers()  {
     if (flattenRechitFeatures_) {
         sp_recHitEnergy_  = &recHitEnergy_;
         sp_recHitEta_  = &recHitEta_;
-        sp_recHitRelPhi_  = &recHitRelPhi_;
+        sp_recHitPhi_  = &recHitPhi_;
         sp_recHitTheta_  = &recHitTheta_;
         sp_recHitR_  = &recHitR_;
         sp_recHitX_  = &recHitX_;
@@ -252,7 +252,7 @@ void NTupleWindow::clear(){
     hitFeatures_.clear();
     recHitEnergy_.clear();
     recHitEta_.clear();
-    recHitRelPhi_.clear();
+    recHitPhi_.clear();
     recHitTheta_.clear();
     recHitR_.clear();
     recHitX_.clear();
@@ -395,7 +395,7 @@ void NTupleWindow::calculateSimclusterFeatures(){
         truthSimclusterY_.push_back(scimpactpoint.Y());
         truthSimclusterZ_.push_back(scimpactpoint.Z());
         truthSimclusterEta_.push_back(scimpactpoint.Eta());
-        truthSimclusterPhi_.push_back(reco::deltaPhi(scimpactpoint.Phi(),getCenterPhi()));
+        truthSimclusterPhi_.push_back(scimpactpoint.Phi());
         truthSimclusterR_.push_back(scimpactpoint.R());
 
         truthSimclusterInnerWindow_.push_back(simClustersInnerWindow_.at(i) ? 1 : 0);

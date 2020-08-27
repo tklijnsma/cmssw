@@ -59,7 +59,7 @@ private:
     std::vector<std::vector<float> >  hitFeatures_; //this includes tracks!
     std::vector<float> recHitEnergy_;
     std::vector<float> recHitEta_;
-    std::vector<float> recHitRelPhi_;
+    std::vector<float> recHitPhi_;
     std::vector<float> recHitTheta_;
     std::vector<float> recHitR_;
     std::vector<float> recHitX_;
@@ -120,12 +120,12 @@ private:
     float windowEta_, windowPhi_;
 
     static const bool flattenRechitFeatures_ = true;
-    enum rhLables {kEnergy, kEta, kRelPhi, kTheta, kR, kx, ky, kz, kDetid, kTime, kId, kPad};
+    enum rhLables {kEnergy, kEta, kPhi, kTheta, kR, kx, ky, kz, kDetid, kTime, kId, kPad};
     //static pointers to create branches and fill tree
     static std::vector<std::vector<float>> * sp_hitFeatures_;
     static std::vector<float> * sp_recHitEnergy_;
     static std::vector<float> * sp_recHitEta_;
-    static std::vector<float> * sp_recHitRelPhi_;
+    static std::vector<float> * sp_recHitPhi_;
     static std::vector<float> * sp_recHitTheta_;
     static std::vector<float> * sp_recHitR_;
     static std::vector<float> * sp_recHitX_;
