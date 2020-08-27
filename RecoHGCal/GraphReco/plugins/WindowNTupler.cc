@@ -43,6 +43,14 @@
 #include "../interface/NTupleWindow.h"
 #include "DataFormats/ParticleFlowReco/interface/HGCalMultiCluster.h"
 #include "HGCSimTruth/HGCSimTruth/interface/SimClusterTools.h"
+
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticleFwd.h"
+
+#include "DataFormats/RecoCandidate/interface/TrackAssociation.h"
+#include "DataFormats/Common/interface/OneToMany.h"
+#include "DataFormats/Common/interface/AssociationMap.h"
+
 #include <algorithm>
 //
 // class declaration
@@ -55,6 +63,8 @@
 
 
 using reco::TrackCollection;
+typedef edm::AssociationMap<edm::OneToMany<
+    TrackingParticleCollection, SimClusterCollection>> TrackingParticleToSimCluster;
 
 class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one::SharedResources>  {
    public:
@@ -78,10 +88,13 @@ class WindowNTupler : public edm::one::EDAnalyzer<edm::one::WatchRuns, edm::one:
 
       // ----------member data ---------------------------
       edm::EDGetTokenT<std::vector<ticl::Trackster>> tracksters_token_;
-      edm::EDGetTokenT<TrackCollection> tracksToken_;
+      edm::EDGetTokenT<edm::View<reco::Track>> tracksToken_;
       edm::EDGetTokenT<reco::CaloClusterCollection> layerClustersToken_;
       edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
       std::vector<edm::EDGetTokenT<HGCRecHitCollection> > rechitsTokens_;
+      //edm::EDGetTokenT<TrackingParticleCollection> trackingPartToken_;
+      edm::EDGetTokenT<reco::RecoToSimCollection> tracksToTrackingPartToken_;
+      edm::EDGetTokenT<TrackingParticleToSimCluster> trackingPartToSimClusToken_;
 
       std::vector<NTupleWindow> windows_;
       hgcal::RecHitTools recHitTools_;
@@ -142,9 +155,12 @@ Tracksterwithpos_and_energy WindowNTupler::assignPositionAndEnergy(const ticl::T
 WindowNTupler::WindowNTupler(const edm::ParameterSet& config)
  :
   tracksters_token_(consumes<std::vector<ticl::Trackster>>(config.getParameter<edm::InputTag>("tracksters"))),
-  tracksToken_(consumes<TrackCollection>(config.getParameter<edm::InputTag>("tracks"))),
+  tracksToken_(consumes<edm::View<reco::Track>>(config.getParameter<edm::InputTag>("tracks"))),
   layerClustersToken_(consumes<reco::CaloClusterCollection>(config.getParameter<edm::InputTag>("layerClusters"))),
   simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))),
+  //trackingPartToken_(consumes<TrackingParticleCollection>(config.getParameter<edm::InputTag>("trackingParticles"))),
+  tracksToTrackingPartToken_(consumes<reco::RecoToSimCollection>(config.getParameter<edm::InputTag>("tracksToTrackingParticles"))),
+  trackingPartToSimClusToken_(consumes<TrackingParticleToSimCluster>(config.getParameter<edm::InputTag>("trackingParticleSimCluster"))),
   outTree_(nullptr)
 
 /* ... */
@@ -201,13 +217,52 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
 
+   reco::RecoToSimCollection tracksToTrackingParticles = iEvent.get(tracksToTrackingPartToken_);
+   TrackingParticleToSimCluster trackingPartToSimClus = iEvent.get(trackingPartToSimClusToken_);
+   
    //get and propagate tracks
    std::vector<TrackWithHGCalPos> proptracks;
-   auto intracks = iEvent.get(tracksToken_);
-   for(const auto& t: intracks){
-       if(fabs(t.eta())< 1.5 || fabs(t.eta())>3.0) continue; //just use potentially interesting ones
-       proptracks.push_back(trackprop_.propagateObject(t));
+   edm::Handle<edm::View<reco::Track>> tracksHandle;
+   iEvent.getByToken(tracksToken_, tracksHandle);
+   std::vector<int> trackTruthIdx(tracksHandle->size(), -2);
+   for(size_t i = 0; i < tracksHandle->size(); i++){
+       edm::RefToBase<reco::Track> track(tracksHandle, i);
+       if(fabs(track->eta())< 1.5 || fabs(track->eta())>3.0) 
+           continue; //just use potentially interesting ones
+       proptracks.push_back(trackprop_.propagateObject(*track));
+       // I know try/catch is a bit ugly, but I don't know if there is another
+       // mechanism to see if the track has matched tracking particle. This is 
+       // what they do in https://github.com/cms-sw/cmssw/blob/master/SimTracker/TrackAssociation/test/testTrackAssociator.cc#L64-L78
+       std::vector<std::pair<TrackingParticleRef, double>> trackingPartsWithQual;
+       try {
+            trackingPartsWithQual = tracksToTrackingParticles[track]; 
+       }
+       catch (edm::Exception const &) {
+           // No trackingParticle match, this is a fake
+           trackTruthIdx.at(i) = -1;
+           continue;
+       } 
+       for (auto& tpWithQual : trackingPartsWithQual) {
+           TrackingParticleRef trackingPart = tpWithQual.first;
+           SimClusterRefVector assocSimClusters;
+           try  {
+               assocSimClusters = trackingPartToSimClus[trackingPart];
+           }
+           catch (edm::Exception const &) { 
+               // Give a unique ID, not matching any simClusters
+               trackTruthIdx.at(i) = insimclusters.size()+i;
+               continue;
+           }
+           
+           // This should be a loop, but need to figure out how to assign to SC.
+           // Maybe also need to group multiple SCs together if they share a track
+           SimClusterRef simClusRef = assocSimClusters.at(0); 
+           trackTruthIdx.at(i) = simClusRef.key();
+       }
    }
+   std::cout << "The size of the in simclusters is " << insimclusters.size() << std::endl;
+   for (auto i : trackTruthIdx)
+       std::cout << "Track truth index is " << i << std::endl;
 
    //get rechits, get positions and merge collections
    std::vector<HGCRecHitWithPos> allrechits;

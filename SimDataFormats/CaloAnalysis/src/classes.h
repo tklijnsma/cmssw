@@ -1,29 +1,14 @@
+#include "DataFormats/Common/interface/AssociationMap.h"
+#include "DataFormats/Common/interface/AssociationMapHelpers.h"
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticleFwd.h"
 #include "SimDataFormats/CaloAnalysis/interface/CaloParticle.h"
 #include "SimDataFormats/CaloAnalysis/interface/CaloParticleFwd.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimClusterFwd.h"
 
-namespace SimDataFormats {
-  namespace CaloAnalysis {
-    SimCluster sc;
-    SimClusterCollection vsc;
-    edm::Wrapper<SimClusterCollection> wvsc;
-
-    SimClusterRef scr;
-    SimClusterRefVector scrv;
-    SimClusterRefProd scrp;
-    SimClusterContainer scc;
-
-    SimClusterHistory sch;
-    edm::Wrapper<SimClusterHistory> wsch;
-
-    CaloParticle cp;
-    CaloParticleCollection vcp;
-    edm::Wrapper<CaloParticleCollection> wvcp;
-
-    CaloParticleRef cpr;
-    CaloParticleRefVector cprv;
-    CaloParticleRefProd cprp;
-    CaloParticleContainer cpc;
-  }  // namespace CaloAnalysis
-}  // namespace SimDataFormats
+#include "DataFormats/Common/interface/Association.h"
+#include "DataFormats/Common/interface/AssociationMap.h"
+#include "DataFormats/Common/interface/Handle.h"
+#include "DataFormats/Common/interface/OneToManyWithQuality.h"
+#include "DataFormats/Common/interface/OneToManyWithQualityGeneric.h"
+#include "DataFormats/Common/interface/View.h"
