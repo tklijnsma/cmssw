@@ -142,6 +142,7 @@ G4bool CaloSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   int primaryID = getTrackID(theTrack);
   if (unitID > 0) {
     currentID.setID(unitID, time, primaryID, depth);
+    if (doFineCalo_) currentID.setFineTrackID(theTrack->GetTrackID());
   } else {
     if (aStep->GetTotalEnergyDeposit() > 0.0) {
       const G4TouchableHistory* touch = static_cast<const G4TouchableHistory*>(theTrack->GetTouchable());
@@ -212,6 +213,7 @@ bool CaloSD::ProcessHits(G4GFlashSpot* aSpot, G4TouchableHistory*) {
     int primaryID = getTrackID(track);
     uint16_t depth = getDepth(&fFakeStep);
     currentID.setID(unitID, time, primaryID, depth);
+    if (doFineCalo_) currentID.setFineTrackID(track->GetTrackID());
 #ifdef EDM_ML_DEBUG
     edm::LogVerbatim("CaloSim") << "CaloSD:: GetSpotInfo for Unit 0x" << std::hex << currentID.unitID() << std::dec
                                 << " Edeposit = " << edepositEM << " " << edepositHAD;
@@ -472,6 +474,7 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
         }
       recordTrackWithHistory->save();
       currentID.setFineTrackID(recordTrackID);
+      aHit->setID(currentID); // Actually overwrite the ID for the hit
 #ifdef EDM_ML_DEBUG
       edm::LogInfo("DoFineCalo")
       << "currentID.getFineTrackID()=" << currentID.getFineTrackID()
@@ -814,6 +817,11 @@ bool CaloSD::saveHit(CaloG4Hit* aHit) {
       tkID = aHit->getTrackID();
       ok = false;
     }
+#ifdef EDM_ML_DEBUG
+    edm::LogInfo("DoFineCalo")
+      << "Saving hit " << aHit->getUnitID()
+      << " with trackID=" << tkID << " (no fineTrackID)";
+#endif
     slave.get()->processHits(
       aHit->getUnitID(), aHit->getEM() / CLHEP::GeV, aHit->getHadr() / CLHEP::GeV, time, tkID, aHit->getDepth());
   }
