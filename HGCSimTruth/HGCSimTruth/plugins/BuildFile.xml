@@ -18,6 +18,7 @@
 <use name="TrackingTools/Records" />
 <use name="RecoLocalCalo/HGCalRecAlgos" />
 <use name="HGCSimTruth/HGCSimTruth" />
+<use name="RecoHGCal/GraphReco" />
 <use name="hepmc" />
 <use name="heppdt" />
 

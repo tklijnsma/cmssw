@@ -561,6 +561,17 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
       continue;
     }
 
+    //DEBUG >>>
+
+    auto groupcp=group;
+    auto it = std::unique (groupcp.begin(),groupcp.end());
+    groupcp.resize(std::distance(groupcp.begin(),it));
+
+    if(groupcp.size() != group.size())
+        throw std::runtime_error("not unique group");
+
+    // <<<< DEBUG end
+
     // sort group elements by sim cluster energies
     sort(group.begin(), group.end(), [&simClusters](const int& iSC, const int& jSC) {
       return simClusters[iSC].energy() > simClusters[jSC].energy();
@@ -571,9 +582,12 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
     ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedimpact;
     std::vector<SimTrack> mergedSCTracks;
 
+    std::cout << "grouping: " << std::endl;
+    float esum = 0;
     for (const int& iSC : group) {
       // there is currently only one track per sim clusters
-      float E = simClusters[iSC].impactMomentum().E();
+      float E = simClusters[iSC].p4().E();
+      esum+=E;
       combinedmomentum += simClusters[iSC].impactMomentum();
       combinedimpact += simClusters[iSC].impactPoint() * E;
 
@@ -598,6 +612,9 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
 
     newsc.setImpactMomentum(combinedmomentum);
     newsc.setImpactPoint(combinedimpact/combinedmomentum.E());
+
+    std::cout << "ESum group: " << esum << " vs " << combinedmomentum.E() << std::endl;
+
     // create the cluster
     mergedSimClusters->emplace_back(newsc);
     auto& cluster = mergedSimClusters->back();
@@ -616,6 +633,10 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
         cluster.addDuplicateRecHitAndFraction(hf.first, hf.second);
       }
     }
+
+    //DEBUG >>>>
+    cluster.simEnergy();
+
 
   }
 }
