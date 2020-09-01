@@ -48,6 +48,16 @@ public:
         useRechits, useLayerClusters
     };
 
+    enum particle_type{
+        type_ambiguous,
+        type_electron,
+        type_photon,
+        type_mip,
+        type_charged_hadron,
+        type_neutral_hadron,
+        n_particle_types
+    };
+
 
     WindowBase(float centerEta, float centerPhi, float outerRegionDEta, float outerRegionDPhi,
             float innerRegionDEta, float innerRegionDPhi);
@@ -121,6 +131,10 @@ public:
                 simClustersInnerWindow_.push_back(isinner);
                 return true;
             }
+            else{
+                badSimClusters_.push_back(&sc);
+                return false;
+            }
         }
         badSimClusters_.push_back(&sc);
         return false;
@@ -170,8 +184,6 @@ public:
         return innerRegionDPhi_;
     }
 
-    static constexpr size_t nIDClasses = 10;//ambig, +-e, +-mu, gamma, pi0, +-cpi, hadr ...
-
     template<class T>
     static std::vector<T> createWindows(size_t nSegmentsPhi,
             size_t nSegmentsEta, double minEta, double maxEta, double frameWidthEta,
@@ -213,8 +225,11 @@ protected:
     void fillLayerClusterFeatures(float*& data, const reco::CaloCluster * ) const;
 
 
+    particle_type pdgToParticleType(int pdgid) const;
+    std::vector<int> particleTypeToOneHot(particle_type pdgid) const;
+    particle_type oneHotToParticleType(const std::vector<int>& ) const;
+    particle_type predictionToParticleType(const float * ) const;
     std::vector<int> pdgToOneHot(int pdgid) const;
-    int oneHotToPdg(const std::vector<int>& ) const;
 
     static const size_t nTrackFeatures_;
     static const size_t nRechitFeatures_;

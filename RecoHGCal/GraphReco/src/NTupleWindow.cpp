@@ -498,7 +498,11 @@ void NTupleWindow::fillTruthAssignment(){
     truthHitAssignedEta_.resize(truthHitFractions_.size());
     truthHitAssignedPhi_.resize(truthHitFractions_.size());
     truthHitAssignedT_.resize(truthHitFractions_.size());
-    truthHitAssignedPIDs_.resize(truthHitFractions_.size());
+
+    std::vector<int> pids(n_particle_types,0);
+    pids.at((int)type_ambiguous) = 1;//default
+    truthHitAssignedPIDs_.resize(truthHitFractions_.size(), pids);
+
     truthHitAssignedInner_.resize(truthHitFractions_.size());
     truthHitAssignedDirX_.resize(truthHitFractions_.size());
     truthHitAssignedDirY_.resize(truthHitFractions_.size());

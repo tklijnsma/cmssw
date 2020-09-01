@@ -108,55 +108,71 @@ void WindowBase::fillLayerClusterFeatures(float*& data, const reco::CaloCluster 
 }
 
 
+WindowBase::particle_type WindowBase::pdgToParticleType(int pdgid)const{
+
+    /*
+     * enum particle_type{
+        type_ambiguous,
+        type_electron,
+        type_photon,
+        type_mip,
+        type_charged_hadron,
+        type_neutral_hadron,
+        n_particle_types
+    };
+     */
+    if(pdgid == 0)
+        return type_ambiguous;
+    if(pdgid == 13 || pdgid == -13)
+        return type_electron;
+    if(pdgid == 22)
+        return type_photon;
+    if(pdgid == 13 || pdgid == -13)
+        return type_mip;
+    if (pdgid == 211 || pdgid == -211 || pdgid == 321 || pdgid == -321) //to be extended
+        return type_charged_hadron;
+
+    return type_neutral_hadron;
+
+}
+
+std::vector<int> WindowBase::particleTypeToOneHot(particle_type ptype) const{
+    std::vector<int> out((int)n_particle_types,0);
+    out.at((int)ptype) = 1.;
+    return out;
+}
+
+WindowBase::particle_type WindowBase::oneHotToParticleType(const std::vector<int>& v) const{
+    int idx=-1;
+    for(int i=0;i<(int)v.size();i++){
+        if(v.at(i)){
+            idx=i;
+            break;
+        }
+    }
+    if(idx >= (int)n_particle_types)
+        throw std::out_of_range("WindowBase::oneHotToParticleType: input vector has wrong size");
+    return (particle_type)idx;
+}
+
+WindowBase::particle_type WindowBase::predictionToParticleType(const float * pred) const{
+    int maxidx=-1;
+    float maxval=-1;
+    for(int i=0;i<(int)n_particle_types;i++){
+        if(maxval<pred[i]){
+            maxval=pred[i];
+            maxidx=i;
+        }
+    }
+    return (particle_type)maxidx;
+}
+
 
 std::vector<int> WindowBase::pdgToOneHot(int pdgid) const{
-    //nIDClasses = 10;//ambig, +-e, +-mu, gamma, pi0, +-cpi, hadr ...
-    std::vector<int> onehot(nIDClasses,0);
-
-    int counter=0;
-    if(pdgid == 0)
-        onehot.at(counter++) = 1;
-    else if(pdgid == 11)
-        onehot.at(counter++) = 1;
-    else if(pdgid == -11)
-        onehot.at(counter++) = 1;
-    else if(pdgid == 13)
-        onehot.at(counter++) = 1;
-    else if(pdgid == -13)
-        onehot.at(counter++) = 1;
-    else if(pdgid == 22)
-        onehot.at(counter++) = 1;
-    else if(pdgid == 210)
-        onehot.at(counter++) = 1;
-    else if(pdgid == 211)
-        onehot.at(counter++) = 1;
-    else if(pdgid == -211)
-        onehot.at(counter++) = 1;
-    else
-        onehot.at(counter) = 1;
-
-    return onehot;
+    return particleTypeToOneHot(pdgToParticleType(pdgid) );
 }
 
-int WindowBase::oneHotToPdg(const std::vector<int>& oh) const{
-    //nIDClasses = 7;//ambig, e, mu, gamma, pi0, cpi, hadr ..
-    if(oh.size() != nIDClasses)
-        throw std::out_of_range("WindowBase::oneHotToPdg");
 
-    if(oh.at(0)) return 0;
-    if(oh.at(1)) return 11;
-    if(oh.at(2)) return -11;
-    if(oh.at(3)) return 13;
-    if(oh.at(4)) return -13;
-    if(oh.at(5)) return 22;
-    if(oh.at(6)) return 210;
-    if(oh.at(7)) return 211;
-    if(oh.at(8)) return -211;
-    else return 0; //FIXME needs to be consistent with PF, Marcel etc
-
-}
-
-// debug
 
 void WindowBase::printDebug()const{
      DEBUGPRINT(centerPhi_);
