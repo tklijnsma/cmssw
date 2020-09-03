@@ -405,6 +405,8 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
         << " itself passes eMinFine_ ("
         << theTrack->GetKineticEnergy() << ">" << eMinFine_ << ")";
 #endif
+      currentID.setFineTrackID(theTrack->GetTrackID());
+      aHit->setID(currentID); // Actually overwrite the ID for the hit
       trkInfo->storeTrack(true);
       }
     // theTrack itself does not pass thresholds; go through its history to find a track that does
