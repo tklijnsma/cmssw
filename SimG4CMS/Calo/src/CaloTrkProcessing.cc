@@ -20,7 +20,7 @@
 
 #include "G4SystemOfUnits.hh"
 
-//#define EDM_ML_DEBUG
+// #define EDM_ML_DEBUG
 
 CaloTrkProcessing::CaloTrkProcessing(const std::string& name,
                                      const edm::EventSetup& es,
@@ -188,6 +188,42 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
   }
 
   if (doFineCalo_ || storeAllTracksCalo_) {
+    // Boundary-crossing logic
+    // const G4VTouchable* touch = aStep->GetPreStepPoint()->GetTouchable();
+    int prestepLV = isItCalo(aStep->GetPreStepPoint()->GetTouchable(), fineDetectors_);
+    int poststepLV = isItCalo(aStep->GetPostStepPoint()->GetTouchable(), fineDetectors_);
+    if (
+      prestepLV < 0 && poststepLV >= 0
+      // Require abs(pre z position) < abs(current z position) to prevent back scattering tracks from being counted
+      && std::abs(theTrack->GetStep()->GetPreStepPoint()->GetPosition().z()) < std::abs(theTrack->GetPosition().z())
+      ) {
+      edm::LogInfo("DoFineCalo")
+        << "Crossed boundary:"
+        << " Track " << id
+        << " prestepLV=" << prestepLV
+        << " poststepLV=" << poststepLV
+        << " GetKineticEnergy=" << theTrack->GetKineticEnergy()
+        << " GetVertexKineticEnergy=" << theTrack->GetVertexKineticEnergy()
+        << " prestepPosition=("
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().x() << ","
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().y() << ","
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().z() << ")"
+        << " poststepPosition=("
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().x() << ","
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().y() << ","
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().z() << ")"
+        << " position=("
+          << theTrack->GetPosition().x() << ","
+          << theTrack->GetPosition().y() << ","
+          << theTrack->GetPosition().z() << ")"
+        << " vertex_position=("
+          << theTrack->GetVertexPosition().x() << ","
+          << theTrack->GetVertexPosition().y() << ","
+          << theTrack->GetVertexPosition().z() << ")"
+        ;
+      trkInfo->setCrossedBoundary(theTrack);
+      }
+    // Decide whether to store in history
     if (!trkInfo->isInHistory()){
       // For fine calo, put every single track in history
       trkInfo->putInHistory();

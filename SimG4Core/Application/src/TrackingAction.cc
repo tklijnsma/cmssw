@@ -62,7 +62,28 @@ void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
       ;
 #endif
 
-    if (extractor_(aTrack).storeTrack()) {
+    if (doFineCalo_){
+      TrackInformation* trkInfo = (TrackInformation*)aTrack->GetUserInformation();
+      if (trkInfo->crossedBoundary()){
+        currentTrack_->save();
+        currentTrack_->setCrossedBoundaryPosMom(id, trkInfo->getPositionAtBoundary(), trkInfo->getMomentumAtBoundary());
+        edm::LogInfo("DoFineCalo")
+          << "PostUserTrackingAction:"
+          << " Track " << aTrack->GetTrackID()
+          << " crossed boundary; pos=("
+            << trkInfo->getPositionAtBoundary().x() << ","
+            << trkInfo->getPositionAtBoundary().y() << ","
+            << trkInfo->getPositionAtBoundary().z() << ")"
+          << " mom=("
+            << trkInfo->getMomentumAtBoundary().x() << ","
+            << trkInfo->getMomentumAtBoundary().y() << ","
+            << trkInfo->getMomentumAtBoundary().z() << ","
+            << trkInfo->getMomentumAtBoundary().e() << ")"
+          ;
+        }
+      }
+
+    if (extractor_(aTrack).storeTrack() || currentTrack_->saved()) {
       currentTrack_->save();
 
       eventAction_->addTkCaloStateInfo(id, p);

@@ -24,7 +24,7 @@
 #include <fstream>
 #include <sstream>
 
-// #define EDM_ML_DEBUG
+#define EDM_ML_DEBUG
 
 CaloSD::CaloSD(const std::string& name,
                const edm::EventSetup& es,
@@ -398,20 +398,22 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
   if (doFineCalo_){
     // theTrack itself won't be available in m_trackManager.m_trksForThisEvent,
     // so check the track itself first without getting TrackWithHistory from the track manager
-    if (theTrack->GetKineticEnergy() > eMinFine_){
+    // if (theTrack->GetKineticEnergy() > eMinFine_){
+    if (trkInfo->crossedBoundary()){
 #ifdef EDM_ML_DEBUG
       edm::LogInfo("DoFineCalo")
         << "theTrack " << theTrack->GetTrackID()
-        << " itself passes eMinFine_ ("
-        << theTrack->GetKineticEnergy() << ">" << eMinFine_ << ")";
+        << " crossed the boundary itself; recording it for hit " << aHit->getUnitID();
+        // << " itself passes eMinFine_ ("
+        // << theTrack->GetKineticEnergy() << ">" << eMinFine_ << ")";
 #endif
       currentID.setFineTrackID(theTrack->GetTrackID());
       aHit->setID(currentID); // Actually overwrite the ID for the hit
       trkInfo->storeTrack(true);
       }
-    // theTrack itself does not pass thresholds; go through its history to find a track that does
+    // theTrack itself does not pass thresholds / does not cross boundary; go through its history to find a track that does
     else{
-      double recordTrackEnergy;
+      // double recordTrackEnergy;
       bool foundViableTrack = false;
       TrackWithHistory* recordTrackWithHistory;
       // Keep track of decay chain of this track for debugging purposes
@@ -433,19 +435,32 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
 #ifdef EDM_ML_DEBUG
       edm::LogInfo("DoFineCalo")
         << "Trying to find the first parent of hit " << aHit->getUnitID()
-        << " that passes energy > " << eMinFine_ << " cut; starting with track " << recordTrackID;
+        // << " that passes energy > " << eMinFine_ << " cut"
+        << " that crosses the boundary"
+        << "; starting with first parent track " << recordTrackID;
 #endif
       while(true){
         decayChain.push_back(recordTrackID);
         recordTrackWithHistory = m_trackManager->getTrackByID(recordTrackID);
-        recordTrackEnergy = sqrt(recordTrackWithHistory->momentum().Mag2());
-        if (recordTrackEnergy > eMinFine_){
+        // recordTrackEnergy = sqrt(recordTrackWithHistory->momentum().Mag2());
+        // if (recordTrackEnergy > eMinFine_){
+        if (recordTrackWithHistory->crossedBoundary() && recordTrackWithHistory->getIDAtBoundary() == (int)recordTrackID){
           foundViableTrack = true;
 #ifdef EDM_ML_DEBUG
           edm::LogInfo("DoFineCalo")
             << "Recording track " << recordTrackID
-            << " with E=" << recordTrackEnergy
+            // << " with E=" << recordTrackEnergy
             << " as source of hit " << aHit->getUnitID()
+            << "; crossed boundary at pos=("
+              << recordTrackWithHistory->getPositionAtBoundary().x() << ","
+              << recordTrackWithHistory->getPositionAtBoundary().y() << ","
+              << recordTrackWithHistory->getPositionAtBoundary().z() << ")"
+            << " mom=("
+              << recordTrackWithHistory->getMomentumAtBoundary().x() << ","
+              << recordTrackWithHistory->getMomentumAtBoundary().y() << ","
+              << recordTrackWithHistory->getMomentumAtBoundary().z() << ","
+              << recordTrackWithHistory->getMomentumAtBoundary().e() << ")"
+            << "id@boundary=" << recordTrackWithHistory->getIDAtBoundary()
             << "; decayChain: " << decayChainToStr(decayChain);
 #endif
           break;
@@ -455,7 +470,8 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
 #ifdef EDM_ML_DEBUG
           edm::LogInfo("DoFineCalo")
             << "Track " << recordTrackID
-            << " does not pass energy threshold, E=" << recordTrackEnergy << " < " << eMinFine_;
+            // << " does not pass energy threshold, E=" << recordTrackEnergy << " < " << eMinFine_;
+            << " did not cross the boundary";
 #endif
           recordTrackID = recordTrackWithHistory->parentID();
           if (recordTrackID <= 0){
