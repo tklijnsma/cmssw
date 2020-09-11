@@ -35,10 +35,32 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
   TrackInformation* trkInfo = (TrackInformation*)aTrack->GetUserInformation();
   if (trkInfo && trkInfo->isPrimary()) {
     eventAction_->prepareForNewPrimary();
+    currentTrack_->setIsPrimary();
+    addPrimary(aTrack->GetTrackID());
   }
   if (nullptr != steppingVerbose_) {
     steppingVerbose_->TrackStarted(aTrack, false);
   }
+
+  if (doFineCalo_){
+    if (
+      aTrack->GetDefinition()->GetPDGEncoding() == 22
+      && std::abs(aTrack->GetVertexPosition().z()) >= 3205.
+      && std::abs(aTrack->GetVertexPosition().z()) < 3400.
+      && aTrack->GetKineticEnergy() >= 5.
+      && isPrimary(aTrack->GetParentID())
+      ){
+        edm::LogInfo("DoFineCalo")
+          << "PreUserTrackingAction: Track " << aTrack->GetTrackID()
+          << " pdgid=" << aTrack->GetDefinition()->GetPDGEncoding()
+          << " ekin=" << aTrack->GetKineticEnergy()
+          << " z=" << aTrack->GetPosition().z()
+          << " parentid=" << aTrack->GetParentID()
+          << " fits fineCalo truth splitting criterion"
+          ;
+        currentTrack_->save();
+        }
+    }
 }
 
 void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {

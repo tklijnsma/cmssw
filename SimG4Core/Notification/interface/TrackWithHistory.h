@@ -44,6 +44,10 @@ public:
   bool storeTrack() const { return storeTrack_; }
   bool saved() const { return saved_; }
 
+  // Setting and getting flags for isPrimary
+  void setIsPrimary() { isPrimary_ = true; }
+  bool isPrimary() const { return isPrimary_; }
+
   // Boundary crossing variables
   void setCrossedBoundaryPosMom(int id, const math::XYZVectorD position, const math::XYZTLorentzVectorD momentum){
     crossedBoundary_ = true;
@@ -88,6 +92,7 @@ private:
   bool storeTrack_;
   bool saved_;
 
+  bool isPrimary_;
   bool crossedBoundary_;
   int idAtBoundary_;
   math::XYZVectorD positionAtBoundary_;

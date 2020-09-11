@@ -27,7 +27,8 @@ TrackWithHistory::TrackWithHistory(const G4Track* g4trk)
       creatorProcess_(nullptr),
       weight_(0),
       storeTrack_(false),
-      saved_(false) {
+      saved_(false),
+      isPrimary_(false) {
   if (g4trk != nullptr) {
     TrackInformationExtractor extractor;
     trackID_ = g4trk->GetTrackID();

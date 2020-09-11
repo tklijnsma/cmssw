@@ -200,6 +200,7 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
       edm::LogInfo("DoFineCalo")
         << "Crossed boundary:"
         << " Track " << id
+        << " pdgid=" << theTrack->GetDefinition()->GetPDGEncoding()
         << " prestepLV=" << prestepLV
         << " poststepLV=" << poststepLV
         << " GetKineticEnergy=" << theTrack->GetKineticEnergy()
