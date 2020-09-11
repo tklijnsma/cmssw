@@ -69,6 +69,9 @@ public:
     return idAtBoundary_;
     }
 
+  bool passesCaloSplittingCriterion() const { return flagCaloSplittingCriterion_; }
+  void setPassesCaloSplittingCriterion() { flagCaloSplittingCriterion_ = true; }
+
   /** Internal consistency check (optional).
      *  Method called at PostUserTrackingAction time, to check
      *  if the information is consistent with that provided
@@ -91,6 +94,7 @@ private:
   double weight_;
   bool storeTrack_;
   bool saved_;
+  bool flagCaloSplittingCriterion_;
 
   bool isPrimary_;
   bool crossedBoundary_;

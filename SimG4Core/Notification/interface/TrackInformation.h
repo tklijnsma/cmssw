@@ -58,6 +58,10 @@ public:
   int getIDfineCalo() const { return ((idFineCalo_ > 0) ? idFineCalo_ : idOnCaloSurface_); }
   void setIDfineCalo(int id) { idFineCalo_ = id; }
 
+  bool passesCaloSplittingCriterion() const { return flagCaloSplittingCriterion_; }
+  void setPassesCaloSplittingCriterion() { flagCaloSplittingCriterion_ = true; }
+
+
   // Boundary crossing variables
   void setCrossedBoundary(const G4Track* track){
     crossedBoundary_ = true;
@@ -119,6 +123,7 @@ private:
   bool idAtBoundary_;
   math::XYZVectorD positionAtBoundary_;
   math::XYZTLorentzVectorD momentumAtBoundary_;
+  bool flagCaloSplittingCriterion_;
 
   int genParticlePID_, caloSurfaceParticlePID_;
   double genParticleP_, caloSurfaceParticleP_;
@@ -150,6 +155,7 @@ private:
         caloIDChecked_(false),
         idFineCalo_(-1),
         crossedBoundary_(false),
+        flagCaloSplittingCriterion_(false),
         genParticlePID_(-1),
         caloSurfaceParticlePID_(0),
         genParticleP_(0),

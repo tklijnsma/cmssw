@@ -44,9 +44,9 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
 
   if (doFineCalo_){
     if (
-      aTrack->GetDefinition()->GetPDGEncoding() == 22
+      ( aTrack->GetDefinition()->GetPDGEncoding() == 22 || std::abs(aTrack->GetDefinition()->GetPDGEncoding()) == 11 )
       && std::abs(aTrack->GetVertexPosition().z()) >= 3205.
-      && std::abs(aTrack->GetVertexPosition().z()) < 3400.
+      && std::abs(aTrack->GetVertexPosition().z()) < 3500.
       && aTrack->GetKineticEnergy() >= 5.
       && isPrimary(aTrack->GetParentID())
       ){
@@ -58,6 +58,8 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
           << " parentid=" << aTrack->GetParentID()
           << " fits fineCalo truth splitting criterion"
           ;
+        trkInfo->setPassesCaloSplittingCriterion();
+        currentTrack_->setPassesCaloSplittingCriterion();
         currentTrack_->save();
         }
     }

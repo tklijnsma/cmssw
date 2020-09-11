@@ -28,6 +28,7 @@ TrackWithHistory::TrackWithHistory(const G4Track* g4trk)
       weight_(0),
       storeTrack_(false),
       saved_(false),
+      flagCaloSplittingCriterion_(false),
       isPrimary_(false) {
   if (g4trk != nullptr) {
     TrackInformationExtractor extractor;

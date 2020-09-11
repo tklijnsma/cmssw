@@ -399,13 +399,13 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
     // theTrack itself won't be available in m_trackManager.m_trksForThisEvent,
     // so check the track itself first without getting TrackWithHistory from the track manager
     // if (theTrack->GetKineticEnergy() > eMinFine_){
-    if (trkInfo->crossedBoundary()){
+    if (trkInfo->crossedBoundary() || trkInfo->passesCaloSplittingCriterion()){
 #ifdef EDM_ML_DEBUG
       edm::LogInfo("DoFineCalo")
         << "theTrack " << theTrack->GetTrackID()
-        << " crossed the boundary itself; recording it for hit " << aHit->getUnitID();
-        // << " itself passes eMinFine_ ("
-        // << theTrack->GetKineticEnergy() << ">" << eMinFine_ << ")";
+        << "itself has crossedBoundary=" << trkInfo->crossedBoundary()
+        << "and passesCaloSplittingCriterion=" << trkInfo->passesCaloSplittingCriterion()
+        << "; recording it for hit " << aHit->getUnitID();
 #endif
       currentID.setFineTrackID(theTrack->GetTrackID());
       aHit->setID(currentID); // Actually overwrite the ID for the hit
@@ -429,24 +429,21 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
           }
         return ss.str();
         };
-      // Find the first parent of this track that passes the energy threshold
+      // Find the first parent of this track that passes the required criteria
       // Start from first parent
       unsigned int recordTrackID = theTrack->GetParentID();
 #ifdef EDM_ML_DEBUG
       edm::LogInfo("DoFineCalo")
         << "Trying to find the first parent of hit " << aHit->getUnitID()
-        // << " that passes energy > " << eMinFine_ << " cut"
-        << " that crosses the boundary"
+        << " that passes saving criterion (crosses boundary or specific criterion)"
         << "; starting with first parent track " << recordTrackID;
 #endif
       while(true){
         decayChain.push_back(recordTrackID);
         recordTrackWithHistory = m_trackManager->getTrackByID(recordTrackID);
-        // recordTrackEnergy = sqrt(recordTrackWithHistory->momentum().Mag2());
-        // if (recordTrackEnergy > eMinFine_){
         if (recordTrackWithHistory->crossedBoundary() && recordTrackWithHistory->getIDAtBoundary() == (int)recordTrackID){
           foundViableTrack = true;
-#ifdef EDM_ML_DEBUG
+// #ifdef EDM_ML_DEBUG
           edm::LogInfo("DoFineCalo")
             << "Recording track " << recordTrackID
             // << " with E=" << recordTrackEnergy
@@ -462,7 +459,18 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
               << recordTrackWithHistory->getMomentumAtBoundary().e() << ")"
             << "id@boundary=" << recordTrackWithHistory->getIDAtBoundary()
             << "; decayChain: " << decayChainToStr(decayChain);
-#endif
+// #endif
+          break;
+          }
+        else if (recordTrackWithHistory->passesCaloSplittingCriterion()){
+          foundViableTrack = true;
+// #ifdef EDM_ML_DEBUG
+          edm::LogInfo("DoFineCalo")
+            << "Recording track " << recordTrackID
+            << " as source of hit " << aHit->getUnitID()
+            << "; passes splitting criteria"
+            << "; decayChain: " << decayChainToStr(decayChain);
+// #endif
           break;
           }
         else{
@@ -470,14 +478,13 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
 #ifdef EDM_ML_DEBUG
           edm::LogInfo("DoFineCalo")
             << "Track " << recordTrackID
-            // << " does not pass energy threshold, E=" << recordTrackEnergy << " < " << eMinFine_;
-            << " did not cross the boundary";
+            << " did not cross the boundary or fit other criteria";
 #endif
           recordTrackID = recordTrackWithHistory->parentID();
           if (recordTrackID <= 0){
             throw cms::Exception("Unknown", "CaloSD")
               << "Hit " << aHit->getUnitID()
-              << " does not have any parent track that passes the energy threshold!"
+              << " does not have any parent track that passes the criteria!"
               << " decayChain so far: " << decayChainToStr(decayChain)
               ;
             }
