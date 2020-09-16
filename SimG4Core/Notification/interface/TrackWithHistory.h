@@ -94,8 +94,8 @@ private:
   double weight_;
   bool storeTrack_;
   bool saved_;
-  bool flagCaloSplittingCriterion_;
 
+  bool flagCaloSplittingCriterion_;
   bool isPrimary_;
   bool crossedBoundary_;
   int idAtBoundary_;

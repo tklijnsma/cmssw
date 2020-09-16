@@ -91,6 +91,7 @@ void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
       if (trkInfo->crossedBoundary()){
         currentTrack_->save();
         currentTrack_->setCrossedBoundaryPosMom(id, trkInfo->getPositionAtBoundary(), trkInfo->getMomentumAtBoundary());
+#ifdef EDM_ML_DEBUG
         edm::LogInfo("DoFineCalo")
           << "PostUserTrackingAction:"
           << " Track " << aTrack->GetTrackID()
@@ -104,6 +105,7 @@ void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
             << trkInfo->getMomentumAtBoundary().z() << ","
             << trkInfo->getMomentumAtBoundary().e() << ")"
           ;
+#endif
         }
       }
 

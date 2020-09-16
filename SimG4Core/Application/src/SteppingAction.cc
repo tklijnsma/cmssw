@@ -10,6 +10,9 @@
 #include "G4UnitsTable.hh"
 #include "G4SystemOfUnits.hh"
 
+#include "G4SteppingManager.hh"
+#include "G4TrackVector.hh"
+
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/isFinite.h"
 
@@ -94,6 +97,21 @@ void SteppingAction::UserSteppingAction(const G4Step* aStep) {
   TrackStatus tstat = (theTrack->GetTrackStatus() == fAlive) ? sAlive : sKilledByProcess;
 
   G4StepPoint* postStep = aStep->GetPostStepPoint();
+
+  edm::LogVerbatim("DoFineCalo")
+    << "Step for track " << theTrack->GetTrackID()
+    << " E=" << theTrack->GetKineticEnergy()
+    ;
+  G4TrackVector* secondaries = fpSteppingManager->GetfSecondary();
+  for(unsigned int i=0; i < secondaries->size(); i++){
+    G4Track* secondary = secondaries->operator[](i);
+    edm::LogVerbatim("DoFineCalo")
+      << "  secondary: " << secondary->GetTrackID()
+      << " E=" << secondary->GetKineticEnergy()
+      << " Evertex=" << secondary->GetVertexKineticEnergy()
+      << " parent=" << secondary->GetParentID()
+      ;
+    }
 
   if (sAlive == tstat && postStep->GetPhysicalVolume() != nullptr) {
     G4StepPoint* preStep = aStep->GetPreStepPoint();

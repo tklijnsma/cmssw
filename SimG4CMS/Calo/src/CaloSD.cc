@@ -24,7 +24,7 @@
 #include <fstream>
 #include <sstream>
 
-#define EDM_ML_DEBUG
+// #define EDM_ML_DEBUG
 
 CaloSD::CaloSD(const std::string& name,
                const edm::EventSetup& es,
@@ -819,11 +819,11 @@ bool CaloSD::saveHit(CaloG4Hit* aHit) {
       ok = false;
       throw cms::Exception("Unknown", "CaloSD") << "m_trackManager not set, saveHit ok=false!";
       }
-#ifdef EDM_ML_DEBUG
+// #ifdef EDM_ML_DEBUG
     edm::LogInfo("DoFineCalo")
       << "Saving hit " << aHit->getUnitID()
       << " with trackID=" << tkID << " fineTrackID=" << fineTrackID;
-#endif
+// #endif
     slave.get()->processHits(
       aHit->getUnitID(), aHit->getEM() / CLHEP::GeV, aHit->getHadr() / CLHEP::GeV, time, tkID, fineTrackID, aHit->getDepth());
     }
