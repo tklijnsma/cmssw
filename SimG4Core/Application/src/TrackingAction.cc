@@ -43,6 +43,7 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
   }
 
   if (doFineCalo_){
+    edm::LogVerbatim("DoFineCalo") << "PreUserTrackingAction for track " << aTrack->GetTrackID() << " at address " << aTrack;
     if (
       ( aTrack->GetDefinition()->GetPDGEncoding() == 22 || std::abs(aTrack->GetDefinition()->GetPDGEncoding()) == 11 )
       && std::abs(aTrack->GetVertexPosition().z()) >= 3205.
@@ -50,7 +51,7 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
       && aTrack->GetKineticEnergy() >= 5.
       && isPrimary(aTrack->GetParentID())
       ){
-        edm::LogInfo("DoFineCalo")
+        edm::LogVerbatim("DoFineCalo")
           << "PreUserTrackingAction: Track " << aTrack->GetTrackID()
           << " pdgid=" << aTrack->GetDefinition()->GetPDGEncoding()
           << " ekin=" << aTrack->GetKineticEnergy()
@@ -66,6 +67,7 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
 }
 
 void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
+  edm::LogVerbatim("DoFineCalo") << "PostUserTrackingAction for track " << aTrack->GetTrackID() << " at address " << aTrack;
   if (eventAction_->trackContainer() != nullptr) {
     uint32_t id = aTrack->GetTrackID();
     math::XYZVectorD pos(

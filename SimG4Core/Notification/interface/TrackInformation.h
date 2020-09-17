@@ -7,6 +7,7 @@
 #include "G4Track.hh"
 #include "DataFormats/Math/interface/Vector3D.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 class TrackInformation : public G4VUserTrackInformation {
 public:
@@ -107,6 +108,52 @@ public:
 
   void Print() const override;
 
+  void insertMomentumAtCreationSecondary(const G4Track* secondary, const G4Track* mother){
+    if (momentumAtCreationSecondaryMap_.count(secondary) > 0) { return; } // If already in map, don't add again
+    edm::LogVerbatim("DoFineCalo")
+      << "Mother " << mother->GetTrackID()
+      << ": Inserting momentumAtCreation for secondary " << secondary->GetTrackID()
+      << " (address " << secondary << ")"
+      << " momentumAtCreation=("
+      << mother->GetMomentum().x() << ","
+      << mother->GetMomentum().y() << ","
+      << mother->GetMomentum().z() << ","
+      << mother->GetKineticEnergy() << ")"
+      << " Esecondary=" << secondary->GetKineticEnergy()
+      ;
+    momentumAtCreationSecondaryMap_.insert(
+      std::pair<const G4Track*, math::XYZTLorentzVectorD>(
+        secondary, math::XYZTLorentzVectorD(
+          mother->GetMomentum().x(), mother->GetMomentum().y(), mother->GetMomentum().z(),
+          mother->GetKineticEnergy()
+          )
+        )
+      );
+    }
+
+  math::XYZTLorentzVectorD momentumAtCreation(const G4Track* secondary) const {
+    auto momentumAtCreationPair = momentumAtCreationSecondaryMap_.find(secondary);
+    if ( momentumAtCreationPair == momentumAtCreationSecondaryMap_.end() ) {
+      throw cms::Exception("Unknown", "TrackInformation")
+        << "Requested momentumAtCreation of track " << secondary->GetTrackID()
+        << " with address " << secondary
+        << ", but it is not a daughter of " << getIDfineCalo()
+        ;
+      }
+    return momentumAtCreationPair->second;
+    }
+
+  math::XYZTLorentzVectorD parentMomentumAtCreation() const {
+    if (!hasParentMomentumAtCreation_)
+      throw cms::Exception("Unknown", "TrackInformation")
+      << "Attempted to get parentMomentumAtCreation, but it is not set";
+    return parentMomentumAtCreation_;
+    }
+  void setParentMomentumAtCreation(math::XYZTLorentzVectorD fparentMomentum){
+    hasParentMomentumAtCreation_ = true;
+    parentMomentumAtCreation_ = fparentMomentum;
+    }
+
 private:
   bool storeTrack_;
   bool isPrimary_;
@@ -130,6 +177,10 @@ private:
 
   bool hasCastorHit_;
   int castorHitPID_;
+
+  bool hasParentMomentumAtCreation_;
+  math::XYZTLorentzVectorD parentMomentumAtCreation_;
+  std::map< const G4Track*, math::XYZTLorentzVectorD > momentumAtCreationSecondaryMap_;
 
   void assertCrossedBoundary() const {
     if (!crossedBoundary_){
@@ -161,7 +212,9 @@ private:
         genParticleP_(0),
         caloSurfaceParticleP_(0),
         hasCastorHit_(false),
-        castorHitPID_(0) {}
+        castorHitPID_(0),
+        hasParentMomentumAtCreation_(false)
+        {}
   friend class NewTrackAction;
 };
 

@@ -20,6 +20,7 @@ void NewTrackAction::secondary(const G4Track *aSecondary, const G4Track &mother,
 }
 
 void NewTrackAction::secondary(G4Track *aSecondary, const G4Track &mother, int flag) const {
+  edm::LogVerbatim("DoFineCalo") << "NewTrackAction::secondary for track " << aSecondary->GetTrackID()  << " at address " << aSecondary << " from parent " << mother.GetTrackID();
   if (aSecondary->GetParentID() != mother.GetTrackID())
     throw SimG4Exception("NewTrackAction: secondary parent ID does not match mother id");
   TrackInformationExtractor extractor;
@@ -45,6 +46,19 @@ void NewTrackAction::addUserInfoToSecondary(G4Track *aTrack, const TrackInformat
   // ralf.ulrich@kit.edu: it is more efficient to use the constructor to copy all data and modify later only when needed
 
   TrackInformation *trkInfo = new TrackInformation();
+
+  math::XYZTLorentzVectorD momentumAtCreation = motherInfo.momentumAtCreation(aTrack);
+  edm::LogVerbatim("DoFineCalo")
+    << "Secondary " << aTrack->GetTrackID() << " (address " << aTrack << ")"
+    << " has parent " << aTrack->GetParentID()
+    << "; parent momentum at creation = ("
+    << momentumAtCreation.Px() << ","
+    << momentumAtCreation.Py() << ","
+    << momentumAtCreation.Pz() << ","
+    << momentumAtCreation.E() << ")"
+    ;
+  trkInfo->setParentMomentumAtCreation(momentumAtCreation);
+
   //  LogDebug("SimG4CoreApplication") << "NewTrackAction called for "
   //				   << aTrack->GetTrackID()
   //				   << " mother " << motherInfo.isPrimary()

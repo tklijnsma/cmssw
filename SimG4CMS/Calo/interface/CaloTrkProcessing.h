@@ -7,6 +7,8 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "G4VTouchable.hh"
+#include "G4Track.hh"
+#include "DataFormats/Math/interface/LorentzVector.h"
 
 #include <map>
 #include <vector>

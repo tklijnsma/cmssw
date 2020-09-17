@@ -187,6 +187,42 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
     throw cms::Exception("Unknown", "CaloTrkProcessing") << "cannot get trkInfo for Track " << id << "\n";
   }
 
+  edm::LogVerbatim("DoFineCalo") << "CaloTrkProcessing for track " << theTrack->GetTrackID() << " at address " << theTrack;
+
+  if (doFineCalo_){
+    // Store current momentum whenever a secondary is created in the trkInfo
+    const std::vector<const G4Track*>* secondaries = aStep->GetSecondaryInCurrentStep();
+    for(unsigned int i=0; i < secondaries->size(); i++){
+      const G4Track* secondary = secondaries->operator[](i);
+      trkInfo->insertMomentumAtCreationSecondary(secondary, theTrack);
+      }
+    }
+
+  // else {
+  //   std::map< const G4Track*, math::XYZTLorentzVectorD >::iterator motherMomentumAtCreationPair = motherMomentumAtCreationMap_.find(theTrack);
+  //   if ( motherMomentumAtCreationPair == motherMomentumAtCreationMap_.end() ) {
+  //     edm::LogVerbatim("DoFineCalo")
+  //       << "  Non-primary track " << theTrack->GetTrackID()
+  //       << " at address " << theTrack
+  //       << " from parent " << theTrack->GetParentID()
+  //       << " has no motherMomentumAtCreation"
+  //       ;
+  //     }
+  //   else {
+  //     math::XYZTLorentzVectorD motherMomentumAtCreation = motherMomentumAtCreationPair->second;
+  //     edm::LogVerbatim("DoFineCalo")
+  //       << "  Non-primary track " << theTrack->GetTrackID()
+  //       << " at address " << theTrack
+  //       << " has parent " << theTrack->GetParentID()
+  //       << "; parent momentum @ creation: ("
+  //       << motherMomentumAtCreation.Px() << ","
+  //       << motherMomentumAtCreation.Py() << ","
+  //       << motherMomentumAtCreation.Pz() << ","
+  //       << motherMomentumAtCreation.E() << ")"
+  //       ;
+  //     }
+  //   }
+
   if (doFineCalo_ || storeAllTracksCalo_) {
     // Boundary-crossing logic
     // const G4VTouchable* touch = aStep->GetPreStepPoint()->GetTouchable();
