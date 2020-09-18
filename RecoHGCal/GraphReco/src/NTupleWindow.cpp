@@ -327,7 +327,7 @@ void NTupleWindow::fillFeatureArrays(){
         }
     }
 
-    return;
+    //return;
     //add tracks LAST!
     for(const auto& tr:tracks_){
         std::vector<float> feats(nTrackFeatures_);
@@ -340,8 +340,8 @@ void NTupleWindow::fillFeatureArrays(){
 
 void NTupleWindow::fillTruthArrays(){
 
-    createDetIDHitAssociation();
     cleanSimclusters();
+    createDetIDHitAssociation();
     calculateSimclusterFeatures();
     calculateTruthFractions();
     fillTruthAssignment();
@@ -351,17 +351,11 @@ void NTupleWindow::fillTruthArrays(){
 void NTupleWindow::createDetIDHitAssociation(){
     detIDHitAsso_.clear();
 
-    if(getMode() == useRechits){
-        for(size_t i=0;i<recHits.size();i++){
-            detIDHitAsso_[recHits.at(i)->hit->detid()]={i,1.};
-        }
+    for(size_t i=0;i<recHits.size();i++){
+        detIDHitAsso_[recHits.at(i)->hit->detid()]={i,1.};
     }
-    else{
-        for(size_t i=0;i<layerClusters_.size();i++){
-            for(const auto& haf: layerClusters_.at(i)->hitsAndFractions()){
-                detIDHitAsso_[haf.first] = {i, haf.second};
-            }
-        }
+    for(size_t i=0;i<tracks_.size();i++){
+        detIDHitAsso_[-1]={i+recHits.size(),1.};
     }
 }
 
@@ -550,13 +544,15 @@ void NTupleWindow::fillTruthAssignment(){
 }
 
 
-
 void NTupleWindow::cleanSimclusters(){
 
     auto rh_energycopy = recHitEnergy_;
 
+
     //clean everything that was NOT assigned (for whatever reason) to this window
     for(const auto& sc: badSimClusters_){
+        if(true) //DEBUG
+            std::cout << "removing bad simcluster at eta " << sc->impactPoint().Eta() << ", phi "<< sc->impactPoint().Phi() << std::endl;
         const auto& hitsandfracs = sc->hits_and_fractions();
         for(const auto& haf: hitsandfracs){
             auto pos = detIDHitAsso_.find(haf.first);
@@ -564,10 +560,60 @@ void NTupleWindow::cleanSimclusters(){
                 continue;
             size_t idx = pos->second.first;
             recHitEnergy_.at(idx) -= rh_energycopy.at(idx) * pos->second.second * haf.second;
-            if(recHitEnergy_.at(idx)<0)
+            if(recHitEnergy_.at(idx)<=1e-9){
                 recHitEnergy_.at(idx)=0;
+            }
         }
     }
+
+    std::cout << "removing hits..." << std::endl;
+
+    std::vector<bool> hits_to_keep;
+
+    for(size_t i=0;i<recHitEnergy_.size();i++){
+        if(recHitEnergy_.at(i)>0)
+            hits_to_keep.push_back(true);
+        else
+            hits_to_keep.push_back(false);
+    }
+
+//    recHits = keepIndices(recHits,hits_to_keep);
+
+    hitFeatures_=keepIndices(hitFeatures_,hits_to_keep);
+    recHitEnergy_=keepIndices(recHitEnergy_,hits_to_keep);
+    recHitEta_=keepIndices(recHitEta_,hits_to_keep);
+    recHitPhi_=keepIndices(recHitPhi_,hits_to_keep);
+    recHitTheta_=keepIndices(recHitTheta_,hits_to_keep);
+    recHitR_=keepIndices(recHitR_,hits_to_keep);
+    recHitX_=keepIndices(recHitX_,hits_to_keep);
+    recHitY_=keepIndices(recHitY_,hits_to_keep);
+    recHitZ_=keepIndices(recHitZ_,hits_to_keep);
+    recHitDetID_=keepIndices(recHitDetID_,hits_to_keep);
+    recHitTime_=keepIndices(recHitTime_,hits_to_keep);
+    recHitID_=keepIndices(recHitID_,hits_to_keep);
+    recHitPad_=keepIndices(recHitPad_,hits_to_keep);
+
+    /*
+
+    truthHitFractions_=keepIndices(truthHitFractions_,hits_to_clean);
+    truthHitAssignementIdx_=removeIndices(truthHitAssignementIdx_,hits_to_clean);
+    truthHitAssignedEnergies_=removeIndices(truthHitAssignedEnergies_,hits_to_clean);
+    truthHitAssignedX_=removeIndices(truthHitAssignedX_,hits_to_clean);
+    truthHitAssignedY_=removeIndices(truthHitAssignedY_,hits_to_clean);
+    truthHitAssignedZ_=removeIndices(truthHitAssignedZ_,hits_to_clean);
+    truthHitAssignedEta_=removeIndices(truthHitAssignedEta_,hits_to_clean);
+    truthHitAssignedPhi_=removeIndices(truthHitAssignedPhi_,hits_to_clean);
+    truthHitAssignedT_=removeIndices(truthHitAssignedT_,hits_to_clean);
+    truthHitAssignedPIDs_=removeIndices(truthHitAssignedPIDs_,hits_to_clean);
+    truthHitAssignedInner_=removeIndices(truthHitAssignedInner_,hits_to_clean);
+    truthHitAssignedDirX_=removeIndices(truthHitAssignedDirX_,hits_to_clean);
+    truthHitAssignedDirY_=removeIndices(truthHitAssignedDirY_,hits_to_clean);
+    truthHitAssignedDirZ_=removeIndices(truthHitAssignedDirZ_,hits_to_clean);
+    truthHitAssignedDirEta_=removeIndices(truthHitAssignedDirEta_,hits_to_clean);
+    truthHitAssignedDirPhi_=removeIndices(truthHitAssignedDirPhi_,hits_to_clean);
+    truthHitAssignedDirR_=removeIndices(truthHitAssignedDirR_,hits_to_clean);
+
+*/
 
     //simclusters are gone and also their energy is gone
 }

@@ -137,6 +137,12 @@ void edm::FlatEtaRangeNoTrackerGunProducer::produce(edm::Event& event, const edm
         //propagate
         prop_.propagate(vertexPos,momentum,(pData->charge() > 0) ? 1 : ((pData->charge() < 0) ? -1 : 0));
 
+        //just move a tad (1mm) towards beamspot
+        if(vertexPos.z()>0)
+            vertexPos.SetXYZT(vertexPos.x(),vertexPos.y(),vertexPos.z()-0.1,vertexPos.t());
+        else
+            vertexPos.SetXYZT(vertexPos.x(),vertexPos.y(),vertexPos.z()+0.1,vertexPos.t());
+
         if(minDistDR_>0){
             bool next=false;
             for(const auto& previ: previous_impacts){

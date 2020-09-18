@@ -69,7 +69,7 @@ private:
 
   edm::EDGetTokenT<std::vector<CaloParticle>> caloParticleToken_;
   edm::EDGetTokenT<std::vector<SimVertex>> simVertexToken_;
- // edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
+  edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
 
   HGCalParticlePropagator prop_;
 
@@ -89,8 +89,8 @@ CaloParticleSimClusterMerger::CaloParticleSimClusterMerger(const edm::ParameterS
     :
       caloParticleToken_(
           consumes<std::vector<CaloParticle>>(params.getParameter<edm::InputTag>("caloParticleCollection"))),
-          simVertexToken_(consumes<std::vector<SimVertex>>(params.getParameter<edm::InputTag>("simVertexCollection")))
-         // simClusterToken_(consumes<std::vector<SimCluster>>(params.getParameter<edm::InputTag>("simClusterCollection")))
+          simVertexToken_(consumes<std::vector<SimVertex>>(params.getParameter<edm::InputTag>("simVertexCollection"))),
+          simClusterToken_(consumes<std::vector<SimCluster>>(params.getParameter<edm::InputTag>("simClusterCollection")))
        {
 
   produces<std::vector<SimCluster>>();                // SimClusters
@@ -121,11 +121,11 @@ void CaloParticleSimClusterMerger::produce(edm::Event& event, const edm::EventSe
   event.getByToken(simVertexToken_, simVertexHandle);
   std::vector<SimVertex> simVertices(*simVertexHandle);
 
-  //edm::Handle<std::vector<SimCluster>> simClusterHandle;
-  //event.getByToken(simClusterToken_, simClusterHandle);
-  //std::vector<SimCluster> simClusters(*simClusterHandle);
+  edm::Handle<std::vector<SimCluster>> simClusterHandle;
+  event.getByToken(simClusterToken_, simClusterHandle);
+  std::vector<SimCluster> simClusters(*simClusterHandle);
 
-
+  size_t ntotal=0;
 
   for(const auto& cp: caloParticles){
 
@@ -159,6 +159,7 @@ void CaloParticleSimClusterMerger::produce(edm::Event& event, const edm::EventSe
       //    //not working
       //}
       for(const auto& sc_ref: cp.simClusters()){
+          ntotal++;
           auto haf = sc_ref->hits_and_fractions();
           if(newsc.hits_and_fractions().size()<1){
               for(const auto& hf: haf)
@@ -174,6 +175,8 @@ void CaloParticleSimClusterMerger::produce(edm::Event& event, const edm::EventSe
 
   }
 
+
+  std::cout << "total simclusters: " << simClusters.size() << " associated to calo particles " << ntotal<< std::endl;
 
   event.put(std::move(outSimClusters));
 }

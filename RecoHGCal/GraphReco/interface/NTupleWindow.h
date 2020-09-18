@@ -184,6 +184,17 @@ private:
 
 };
 
+//helper
+
+template<class T>
+std::vector<T> keepIndices(const std::vector<T> & v, const std::vector<bool> indices){
+    std::vector<T> out;
+    for(size_t ii=0;ii<indices.size();ii++){
+        if(indices.at(ii))
+           out.push_back(v.at(ii));
+    }
+    return out;
+}
 
 
 

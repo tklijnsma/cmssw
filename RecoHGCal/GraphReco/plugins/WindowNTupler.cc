@@ -183,7 +183,7 @@ WindowNTupler::WindowNTupler(const edm::ParameterSet& config)
 
     for(auto& w: windows_){
         w.setMode(WindowBase::useRechits);//FIXME make configurable
-        w.setRemoveFrameSimclusters(config.getParameter<bool>("removeFrameSimclusters"));
+        w.setRemoveFrameSimclusters(true);
     }
         //w.setMode(WindowBase::useLayerClusters);//FIXME make configurable
 
@@ -283,7 +283,6 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    std::vector<size_t> filledtrack(proptracks.size(),0);
    std::vector<size_t> filledrechits(allrechits.size(),0);
    std::vector<size_t> filledlayercluster(inlayerclusters.size(),0);
-   std::vector<size_t> filledsimclusters(insimclusters.size(),0);
 
    //rechits
    //filledrechits vector etc
@@ -315,8 +314,8 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
        for(size_t it=0;it<insimclusters.size();it++) {
            //not here to catch some strays if(filledsimclusters.at(it)>3) continue;
-           if(window.maybeAddSimCluster(insimclusters.at(it),sctools_.isHGCal(insimclusters.at(it)) ))
-               filledsimclusters.at(it)++;
+           window.maybeAddSimCluster(insimclusters.at(it),sctools_.isHGCal(insimclusters.at(it)));
+
        }
 
        //the follwing will not work yet before everything is filled

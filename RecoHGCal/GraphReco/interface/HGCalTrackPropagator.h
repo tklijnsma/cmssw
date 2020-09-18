@@ -110,46 +110,82 @@ ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int ch
     if(!setup_)
         throw cms::Exception("HGCalTrackPropagator")
                         << "event setup not loaded";
+
+
+    typedef TrajectoryStateOnSurface TSOS;
+
+    math::XYZTLorentzVectorF point(part.vertex().x(),part.vertex().y(),part.vertex().z(),part.vertex().t());
+    math::XYZTLorentzVectorF momentum(part.momentum().x(),part.momentum().y(),part.momentum().z(),part.momentum().T());
+
+
     zpos trackz = posZ;
-    if(part.eta()<0) trackz = negZ;
+    if(momentum.z()<0) trackz = negZ;
+    const double caloz = trackz == posZ ? frontz_ : backz_;
 
-    if(charge<-100)
-        charge = part.charge();
+    bool failed=true;
 
-    if(!charge){ //no bending
 
-        auto normmom = part.momentum()/ std::sqrt(part.momentum().mag2());
-        double zdist = frontz_ - part.vertex().z();
-        if(trackz == negZ)
-            zdist = backz_ - part.vertex().z();
+    const double c = 2.99792458e10; //cm/s
+    double betazc = momentum.Beta() * momentum.z()/momentum.P() * c;
 
-        double scale = (zdist+part.vertex().z())/part.vertex().z();
-        if(!part.vertex().z())
-            scale = trackz == negZ ? backz_ : frontz_;
 
-        normmom*=scale;
 
-        return ObjectWithPos<T>{&part,
-            GlobalPoint(normmom.x()+part.vertex().x(),
-                    normmom.y()+part.vertex().y(),
-                    normmom.z()+part.vertex().z()),
-                GlobalVector(part.momentum().X(),part.momentum().Y(),part.momentum().Z())};
+    double zdist = caloz - point.z();
+    double timeprop = zdist/betazc;
+
+
+    if(!charge){
+        auto normmom = momentum / momentum.z();
+        //figure out target
+        normmom *= zdist;
+
+        point = math::XYZTLorentzVectorF(normmom.x()+point.x(),
+                normmom.y()+point.y(),
+                normmom.z()+point.z(),
+                timeprop+point.T());
+
+        failed=false;
     }
+    else{
+        const MagneticField * field=bField_.product();
 
-    reco::TrackBase::Point refpoint(part.vertex().Coordinates())  ;
-    reco::TrackBase::Vector momentum(part.momentum());
+        GlobalPoint gpoint(point.x(),point.y(),point.z());
+        GlobalVector gmomentum(momentum.x(),momentum.y(),momentum.z());
 
-    auto trackdummy = reco::Track(0,1,refpoint,momentum,charge,reco::TrackBase::CovarianceMatrix());
+        if(fabs(point.z())>fabs(caloz))
+            gmomentum *= -1;
 
-    FreeTrajectoryState fts = trajectoryStateTransform::outerFreeState(trackdummy, bField_.product());
+        TSOS startingState( GlobalTrajectoryParameters(gpoint,
+                gmomentum, charge, field));
 
-    TrajectoryStateOnSurface tsos = (*propagator_).propagate(fts, frontFaces_[trackz]->surface());
-    if (tsos.isValid())
-        return ObjectWithPos<T>{&part, tsos.globalPosition(), tsos.globalMomentum()};
-    return ObjectWithPos<T>{&part,GlobalPoint(refpoint.x(), refpoint.y(),refpoint.z()),
-        GlobalVector(momentum.X(),momentum.Y(),momentum.Z())};
+        TSOS propState = (*propagator_).propagate( startingState, frontFaces_[trackz]->surface());
+
+        if (propState.isValid()){
+            auto proppoint = propState.globalPosition();
+            auto propmomentum = propState.globalMomentum();
 
 
+            point = math::XYZTLorentzVectorF(proppoint.x(),
+                    proppoint.y(),
+                    proppoint.z(),
+                    timeprop+point.T());
+
+            momentum = math::XYZTLorentzVectorF(propmomentum.x(),
+                    propmomentum.y(),
+                    propmomentum.z(),
+                    momentum.T());
+
+            failed=false;
+        }
+    }
+    /*
+     *
+    const GlobalPoint  pos;
+    const GlobalVector momentum;//momentum at position
+     */
+
+    return ObjectWithPos<T>{&part, GlobalPoint(point.x(),point.y(),point.z()),
+        GlobalVector(momentum.x(),momentum.y(),momentum.z())};
 
 }
 
@@ -159,7 +195,8 @@ inline ObjectWithPos<reco::Track> HGCalObjectPropagator<reco::Track>::propagateO
         throw cms::Exception("HGCalObjectPropagator")
                         << "event setup not loaded";
     zpos trackz = posZ;
-    if(t.eta()<0) trackz = negZ;
+    if(t.pz()<0) trackz = negZ;
+
 
     FreeTrajectoryState fts = trajectoryStateTransform::outerFreeState(t, bField_.product());
 

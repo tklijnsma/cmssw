@@ -582,7 +582,7 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
     ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float>> combinedimpact;
     std::vector<SimTrack> mergedSCTracks;
 
-    std::cout << "grouping: " << std::endl;
+    //std::cout << "grouping: " << std::endl;
     float esum = 0;
     for (const int& iSC : group) {
       // there is currently only one track per sim clusters
@@ -591,9 +591,9 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
       combinedmomentum += simClusters[iSC].impactMomentum();
       combinedimpact += simClusters[iSC].impactPoint() * E;
 
-      std::cout << "pos " << iSC << ": " << simClusters[iSC].impactPoint() << " eta "
-                << simClusters[iSC].impactPoint().Eta() << " momentum " << simClusters[iSC].impactMomentum()
-                << " vertexmomentum " << simClusters[iSC].p4() << std::endl;
+      //std::cout << "pos " << iSC << ": " << simClusters[iSC].impactPoint() << " eta "
+      //          << simClusters[iSC].impactPoint().Eta() << " momentum " << simClusters[iSC].impactMomentum()
+      //          << " vertexmomentum " << simClusters[iSC].p4() << std::endl;
       auto& scTracks = simClusters[iSC].g4Tracks();
       mergedSCTracks.insert(mergedSCTracks.end(), scTracks.begin(), scTracks.end());
     }
@@ -613,7 +613,7 @@ void HGCTruthProducer::mergeSimClusters(const SimClusterCollection& simClusters,
     newsc.setImpactMomentum(combinedmomentum);
     newsc.setImpactPoint(combinedimpact/combinedmomentum.E());
 
-    std::cout << "ESum group: " << esum << " vs " << combinedmomentum.E() << std::endl;
+    //std::cout << "ESum group: " << esum << " vs " << combinedmomentum.E() << std::endl;
 
     // create the cluster
     mergedSimClusters->emplace_back(newsc);
