@@ -321,8 +321,11 @@ WindowNTupler::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        //the follwing will not work yet before everything is filled
        window.fillFeatureArrays();
        window.flattenRechitFeatures();
-       window.fillTruthArrays();
        window.fillTiclAssignment();
+
+
+       window.fillTruthArrays();
+
        window.assignTreePointers();
 
        outTree_->Fill();

@@ -41,7 +41,7 @@ std::vector<float>               * NTupleWindow::sp_truthHitAssignedDirX_=0;
 std::vector<float>               * NTupleWindow::sp_truthHitAssignedDirY_=0;
 std::vector<float>               * NTupleWindow::sp_truthHitAssignedDirZ_=0;
 std::vector<float>               * NTupleWindow::sp_truthHitAssignedDirEta_=0;
-std::vector<float>               * NTupleWindow::sp_truthHitAssignedDirPhi_=0;
+std::vector<float>               * NTupleWindow::sp_truthHitAssignedDepEnergies_=0;
 std::vector<float>               * NTupleWindow::sp_truthHitAssignedDirR_=0;
 
 std::vector<int>    * NTupleWindow::sp_truthSimclusterIdx_=0;
@@ -59,7 +59,7 @@ std::vector<float>  * NTupleWindow::sp_truthSimclusterDirX_=0;
 std::vector<float>  * NTupleWindow::sp_truthSimclusterDirY_=0;
 std::vector<float>  * NTupleWindow::sp_truthSimclusterDirZ_=0;
 std::vector<float>  * NTupleWindow::sp_truthSimclusterDirEta_=0;
-std::vector<float>  * NTupleWindow::sp_truthSimclusterDirPhi_=0;
+std::vector<float>  * NTupleWindow::sp_truthSimclusterDepEnergies_=0;
 std::vector<float>  * NTupleWindow::sp_truthSimclusterDirR_=0;
 
 std::vector<int>   * NTupleWindow::sp_ticlHitAssignementIdx_=0;
@@ -116,7 +116,7 @@ void NTupleWindow::createTreeBranches(TTree* t){
     t->Branch("truthHitAssignedDirY", &sp_truthHitAssignedDirY_);
     t->Branch("truthHitAssignedDirZ", &sp_truthHitAssignedDirZ_);
     t->Branch("truthHitAssignedDirEta", &sp_truthHitAssignedDirEta_);
-    t->Branch("truthHitAssignedDirPhi", &sp_truthHitAssignedDirPhi_);
+    t->Branch("truthHitAssignedDepEnergies", &sp_truthHitAssignedDepEnergies_);
     t->Branch("truthHitAssignedDirR", &sp_truthHitAssignedDirR_);
 
     t->Branch("truthSimclusterIdx",&sp_truthSimclusterIdx_);
@@ -132,7 +132,7 @@ void NTupleWindow::createTreeBranches(TTree* t){
     t->Branch("truthSimclusterDirY",&sp_truthSimclusterDirY_);
     t->Branch("truthSimclusterDirZ",&sp_truthSimclusterDirZ_);
     t->Branch("truthSimclusterDirEta",&sp_truthSimclusterDirEta_);
-    t->Branch("truthSimclusterDirPhi",&sp_truthSimclusterDirPhi_);
+    t->Branch("truthSimclusterDepEnergies",&sp_truthSimclusterDepEnergies_);
     t->Branch("truthSimclusterDirR",&sp_truthSimclusterDirR_);
 
     t->Branch("ticlHitAssignementIdx",  &sp_ticlHitAssignementIdx_  );
@@ -211,7 +211,7 @@ void NTupleWindow::assignTreePointers()  {
     sp_truthHitAssignedDirY_ = &truthHitAssignedDirY_;
     sp_truthHitAssignedDirZ_ = &truthHitAssignedDirZ_;
     sp_truthHitAssignedDirEta_ = &truthHitAssignedDirEta_;
-    sp_truthHitAssignedDirPhi_ = &truthHitAssignedDirPhi_;
+    sp_truthHitAssignedDepEnergies_ = &truthHitAssignedDepEnergies_;
     sp_truthHitAssignedDirR_ = &truthHitAssignedDirR_;
 
     sp_truthSimclusterIdx_ = &truthSimclusterIdx_;
@@ -230,7 +230,7 @@ void NTupleWindow::assignTreePointers()  {
     sp_truthSimclusterDirY_=&truthSimclusterDirX_;
     sp_truthSimclusterDirZ_=&truthSimclusterDirZ_;
     sp_truthSimclusterDirEta_=&truthSimclusterDirEta_;
-    sp_truthSimclusterDirPhi_=&truthSimclusterDirPhi_;
+    sp_truthSimclusterDepEnergies_=&truthSimclusterDepEnergies_;
     sp_truthSimclusterDirR_=&truthSimclusterDirR_;
 
 
@@ -278,7 +278,7 @@ void NTupleWindow::clear(){
     truthHitAssignedDirY_.clear();
     truthHitAssignedDirZ_.clear();
     truthHitAssignedDirEta_.clear();
-    truthHitAssignedDirPhi_.clear();
+    truthHitAssignedDepEnergies_.clear();
     truthHitAssignedDirR_.clear();
 
     truthSimclusterIdx_.clear();
@@ -297,7 +297,7 @@ void NTupleWindow::clear(){
     truthSimclusterDirX_.clear();
     truthSimclusterDirZ_.clear();
     truthSimclusterDirEta_.clear();
-    truthSimclusterDirPhi_.clear();
+    truthSimclusterDepEnergies_.clear();
     truthSimclusterDirR_.clear();
 
 
@@ -336,16 +336,66 @@ void NTupleWindow::fillFeatureArrays(){
         hitFeatures_.push_back(feats);
     }
 
+
+    createDetIDHitAssociation();
+
 }
 
 void NTupleWindow::fillTruthArrays(){
 
-    cleanSimclusters();
-    createDetIDHitAssociation();
+    if(ticlHitAssignementIdx_.size() < 1 || recHitEnergy_.size() < 1)
+        throw std::runtime_error("NTupleWindow::fillTruthArrays: first fill all reco quantities including ticl");
+
+    auto hits_to_keep = cleanSimclusters();
     calculateSimclusterFeatures();
     calculateTruthFractions();
     fillTruthAssignment();
 
+    bool keep_all=true;
+    for(const auto k:hits_to_keep){
+        if(!k)
+            keep_all=false;
+        if(!keep_all)
+            break;
+    }
+    if(keep_all)
+        return;
+    //clean up after all assignments have been done
+    //hitFeatures_=keepIndices(hitFeatures_,hits_to_keep);         //
+    recHitEnergy_=keepIndices(recHitEnergy_,hits_to_keep);       //recHitEnergy_.clear();
+    recHitEta_=keepIndices(recHitEta_,hits_to_keep);             //recHitEta_.clear();
+    recHitPhi_=keepIndices(recHitPhi_,hits_to_keep);             //recHitPhi_.clear();
+    recHitTheta_=keepIndices(recHitTheta_,hits_to_keep);         //recHitTheta_.clear();
+    recHitR_=keepIndices(recHitR_,hits_to_keep);                 //recHitR_.clear();
+    recHitX_=keepIndices(recHitX_,hits_to_keep);                 //recHitX_.clear();
+    recHitY_=keepIndices(recHitY_,hits_to_keep);                 //recHitY_.clear();
+    recHitZ_=keepIndices(recHitZ_,hits_to_keep);                 //recHitZ_.clear();
+    recHitDetID_=keepIndices(recHitDetID_,hits_to_keep);         //recHitDetID_.clear();
+    recHitTime_=keepIndices(recHitTime_,hits_to_keep);           //recHitTime_.clear();
+    recHitID_=keepIndices(recHitID_,hits_to_keep);               //recHitID_.clear();
+    recHitPad_=keepIndices(recHitPad_,hits_to_keep);             //recHitPad_.clear();
+
+
+    truthHitFractions_=keepIndices(truthHitFractions_,hits_to_keep);                       //truthHitFractions_.clear();
+    truthHitAssignementIdx_=keepIndices(truthHitAssignementIdx_,hits_to_keep);             //truthHitAssignementIdx_.clear();
+    truthHitAssignedEnergies_=keepIndices(truthHitAssignedEnergies_,hits_to_keep);         //truthHitAssignedEnergies_.clear();
+    truthHitAssignedX_=keepIndices(truthHitAssignedX_,hits_to_keep);                       //truthHitAssignedX_.clear();
+    truthHitAssignedY_=keepIndices(truthHitAssignedY_,hits_to_keep);                       //truthHitAssignedY_.clear();
+    truthHitAssignedZ_=keepIndices(truthHitAssignedZ_,hits_to_keep);                       //truthHitAssignedZ_.clear();
+    truthHitAssignedEta_=keepIndices(truthHitAssignedEta_,hits_to_keep);                   //truthHitAssignedEta_.clear();
+    truthHitAssignedPhi_=keepIndices(truthHitAssignedPhi_,hits_to_keep);                   //truthHitAssignedPhi_.clear();
+    truthHitAssignedT_=keepIndices(truthHitAssignedT_,hits_to_keep);                       //truthHitAssignedT_.clear();
+    truthHitAssignedPIDs_=keepIndices(truthHitAssignedPIDs_,hits_to_keep);                 //truthHitAssignedPIDs_.clear();
+    truthHitAssignedInner_=keepIndices(truthHitAssignedInner_,hits_to_keep);               //truthHitAssignedInner_.clear();
+    truthHitAssignedDirX_=keepIndices(truthHitAssignedDirX_,hits_to_keep);                 //truthHitAssignedDirX_.clear();
+    truthHitAssignedDirY_=keepIndices(truthHitAssignedDirY_,hits_to_keep);                 //truthHitAssignedDirY_.clear();
+    truthHitAssignedDirZ_=keepIndices(truthHitAssignedDirZ_,hits_to_keep);                 //truthHitAssignedDirZ_.clear();
+    truthHitAssignedDirEta_=keepIndices(truthHitAssignedDirEta_,hits_to_keep);             //truthHitAssignedDirEta_.clear();
+    truthHitAssignedDepEnergies_=keepIndices(truthHitAssignedDepEnergies_,hits_to_keep);   //truthHitAssignedDepEnergies_.clear();
+    truthHitAssignedDirR_=keepIndices(truthHitAssignedDirR_,hits_to_keep);                 //truthHitAssignedDirR_.clear();
+
+    ticlHitAssignementIdx_=keepIndices(ticlHitAssignementIdx_,hits_to_keep);
+    ticlHitAssignedEnergies_=keepIndices(ticlHitAssignedEnergies_,hits_to_keep);
 }
 
 void NTupleWindow::createDetIDHitAssociation(){
@@ -376,7 +426,7 @@ void NTupleWindow::calculateSimclusterFeatures(){
     truthSimclusterDirY_.clear();
     truthSimclusterDirZ_.clear();
     truthSimclusterDirEta_.clear();
-    truthSimclusterDirPhi_.clear();
+    truthSimclusterDepEnergies_.clear();
     truthSimclusterDirR_.clear();
 
 
@@ -401,8 +451,19 @@ void NTupleWindow::calculateSimclusterFeatures(){
         truthSimclusterDirY_.push_back(scimpactmom.Y());
         truthSimclusterDirZ_.push_back(scimpactmom.Z());
         truthSimclusterDirEta_.push_back(scimpactmom.Eta());
-        truthSimclusterDirPhi_.push_back(scimpactmom.Phi());
         truthSimclusterDirR_.push_back(scimpactmom.R());
+
+        double dep_energy=0;
+        const auto& hitsandfracs = simClusters_.at(i)->hits_and_fractions();
+        for(const auto& haf: hitsandfracs){
+            auto pos = detIDHitAsso_.find(haf.first);
+            if(pos == detIDHitAsso_.end()) //edges or not included in layer clusters
+                continue;
+            int idx = pos->second.first;
+            float totalfrac = pos->second.second * haf.second;
+            dep_energy += recHitEnergy_.at(idx) * totalfrac;
+        }
+        truthSimclusterDepEnergies_.push_back(dep_energy);
 
     }
 }
@@ -502,7 +563,7 @@ void NTupleWindow::fillTruthAssignment(){
     truthHitAssignedDirY_.resize(truthHitFractions_.size());
     truthHitAssignedDirZ_.resize(truthHitFractions_.size());
     truthHitAssignedDirEta_.resize(truthHitFractions_.size());
-    truthHitAssignedDirPhi_.resize(truthHitFractions_.size());
+    truthHitAssignedDepEnergies_.resize(truthHitFractions_.size());
     truthHitAssignedDirR_.resize(truthHitFractions_.size());
 
 
@@ -536,7 +597,7 @@ void NTupleWindow::fillTruthAssignment(){
         truthHitAssignedDirY_.at(i_hit) = truthSimclusterDirY_.at(maxfrac_idx);
         truthHitAssignedDirZ_.at(i_hit) = truthSimclusterDirZ_.at(maxfrac_idx);
         truthHitAssignedDirEta_.at(i_hit) = truthSimclusterDirEta_.at(maxfrac_idx);
-        truthHitAssignedDirPhi_.at(i_hit) = truthSimclusterDirPhi_.at(maxfrac_idx);
+        truthHitAssignedDepEnergies_.at(i_hit) = truthSimclusterDepEnergies_.at(maxfrac_idx);
         truthHitAssignedDirR_.at(i_hit) = truthSimclusterDirR_.at(maxfrac_idx);
         truthHitAssignedInner_.at(i_hit) = truthSimclusterInnerWindow_.at(maxfrac_idx);
 
@@ -544,26 +605,31 @@ void NTupleWindow::fillTruthAssignment(){
 }
 
 
-void NTupleWindow::cleanSimclusters(){
+std::vector<bool> NTupleWindow::cleanSimclusters(){
 
     auto rh_energycopy = recHitEnergy_;
 
 
     //clean everything that was NOT assigned (for whatever reason) to this window
     for(const auto& sc: badSimClusters_){
-        if(true) //DEBUG
-            std::cout << "removing bad simcluster at eta " << sc->impactPoint().Eta() << ", phi "<< sc->impactPoint().Phi() << std::endl;
+        float energy=0;
+        size_t nhits=0;
         const auto& hitsandfracs = sc->hits_and_fractions();
         for(const auto& haf: hitsandfracs){
             auto pos = detIDHitAsso_.find(haf.first);
             if(pos == detIDHitAsso_.end()) //edges or not included in layer clusters
                 continue;
             size_t idx = pos->second.first;
-            recHitEnergy_.at(idx) -= rh_energycopy.at(idx) * pos->second.second * haf.second;
+            double thisenergy = rh_energycopy.at(idx) * pos->second.second * haf.second;
+            recHitEnergy_.at(idx) -= thisenergy;
+            energy += thisenergy;
+            nhits++;
             if(recHitEnergy_.at(idx)<=1e-9){
                 recHitEnergy_.at(idx)=0;
             }
         }
+        std::cout << "removed bad sc at eta "  <<  sc->impactPoint().Eta() << ", phi "<< sc->impactPoint().Phi()
+                << ", depo energy " << energy <<" in "<<nhits<<" hits"<<", impact en "<< sc->impactMomentum().E()<< std::endl;
     }
 
     std::cout << "removing hits..." << std::endl;
@@ -577,43 +643,13 @@ void NTupleWindow::cleanSimclusters(){
             hits_to_keep.push_back(false);
     }
 
+    return hits_to_keep;
+
+    // do not remove bare rechits! they are needed with original index later
 //    recHits = keepIndices(recHits,hits_to_keep);
 
-    hitFeatures_=keepIndices(hitFeatures_,hits_to_keep);
-    recHitEnergy_=keepIndices(recHitEnergy_,hits_to_keep);
-    recHitEta_=keepIndices(recHitEta_,hits_to_keep);
-    recHitPhi_=keepIndices(recHitPhi_,hits_to_keep);
-    recHitTheta_=keepIndices(recHitTheta_,hits_to_keep);
-    recHitR_=keepIndices(recHitR_,hits_to_keep);
-    recHitX_=keepIndices(recHitX_,hits_to_keep);
-    recHitY_=keepIndices(recHitY_,hits_to_keep);
-    recHitZ_=keepIndices(recHitZ_,hits_to_keep);
-    recHitDetID_=keepIndices(recHitDetID_,hits_to_keep);
-    recHitTime_=keepIndices(recHitTime_,hits_to_keep);
-    recHitID_=keepIndices(recHitID_,hits_to_keep);
-    recHitPad_=keepIndices(recHitPad_,hits_to_keep);
 
-    /*
 
-    truthHitFractions_=keepIndices(truthHitFractions_,hits_to_clean);
-    truthHitAssignementIdx_=removeIndices(truthHitAssignementIdx_,hits_to_clean);
-    truthHitAssignedEnergies_=removeIndices(truthHitAssignedEnergies_,hits_to_clean);
-    truthHitAssignedX_=removeIndices(truthHitAssignedX_,hits_to_clean);
-    truthHitAssignedY_=removeIndices(truthHitAssignedY_,hits_to_clean);
-    truthHitAssignedZ_=removeIndices(truthHitAssignedZ_,hits_to_clean);
-    truthHitAssignedEta_=removeIndices(truthHitAssignedEta_,hits_to_clean);
-    truthHitAssignedPhi_=removeIndices(truthHitAssignedPhi_,hits_to_clean);
-    truthHitAssignedT_=removeIndices(truthHitAssignedT_,hits_to_clean);
-    truthHitAssignedPIDs_=removeIndices(truthHitAssignedPIDs_,hits_to_clean);
-    truthHitAssignedInner_=removeIndices(truthHitAssignedInner_,hits_to_clean);
-    truthHitAssignedDirX_=removeIndices(truthHitAssignedDirX_,hits_to_clean);
-    truthHitAssignedDirY_=removeIndices(truthHitAssignedDirY_,hits_to_clean);
-    truthHitAssignedDirZ_=removeIndices(truthHitAssignedDirZ_,hits_to_clean);
-    truthHitAssignedDirEta_=removeIndices(truthHitAssignedDirEta_,hits_to_clean);
-    truthHitAssignedDirPhi_=removeIndices(truthHitAssignedDirPhi_,hits_to_clean);
-    truthHitAssignedDirR_=removeIndices(truthHitAssignedDirR_,hits_to_clean);
-
-*/
 
     //simclusters are gone and also their energy is gone
 }
@@ -621,8 +657,8 @@ void NTupleWindow::cleanSimclusters(){
 void NTupleWindow::fillTiclAssignment(){//last
 
 
-    ticlHitAssignementIdx_.resize(truthHitFractions_.size(), -1);
-    ticlHitAssignedEnergies_.resize(truthHitFractions_.size(), -1);
+    ticlHitAssignementIdx_.resize(recHitEnergy_.size(), -1);
+    ticlHitAssignedEnergies_.resize(recHitEnergy_.size(), -1);
 
 
     for (size_t it=0;it<ticltracksters_.size();it++) {

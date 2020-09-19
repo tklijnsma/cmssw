@@ -48,7 +48,7 @@ private:
     void calculateSimclusterFeatures();
     void calculateTruthFractions();
     void fillTruthAssignment();
-    void cleanSimclusters();
+    std::vector<bool> cleanSimclusters();
 
 
     //temporary for (layer cluster) fraction calculation. detID to hit index and fraction
@@ -91,7 +91,7 @@ private:
     std::vector<float>               truthHitAssignedDirY_;
     std::vector<float>               truthHitAssignedDirZ_;
     std::vector<float>               truthHitAssignedDirEta_;
-    std::vector<float>               truthHitAssignedDirPhi_;
+    std::vector<float>               truthHitAssignedDepEnergies_;
     std::vector<float>               truthHitAssignedDirR_;
 
     std::vector<int>     truthSimclusterIdx_;
@@ -108,7 +108,7 @@ private:
     std::vector<float>   truthSimclusterDirY_;
     std::vector<float>   truthSimclusterDirZ_;
     std::vector<float>   truthSimclusterDirEta_;
-    std::vector<float>   truthSimclusterDirPhi_;
+    std::vector<float>   truthSimclusterDepEnergies_;
     std::vector<float>   truthSimclusterDirR_;
     std::vector<float>   truthSimclusterInnerWindow_;
 
@@ -152,7 +152,7 @@ private:
     static std::vector<float>               * sp_truthHitAssignedDirY_;
     static std::vector<float>               * sp_truthHitAssignedDirZ_;
     static std::vector<float>               * sp_truthHitAssignedDirEta_;
-    static std::vector<float>               * sp_truthHitAssignedDirPhi_;
+    static std::vector<float>               * sp_truthHitAssignedDepEnergies_;
     static std::vector<float>               * sp_truthHitAssignedDirR_;
 
     static std::vector<int>    * sp_truthSimclusterIdx_;
@@ -172,7 +172,7 @@ private:
     static std::vector<float>  * sp_truthSimclusterDirZ_;
 
     static std::vector<float>  * sp_truthSimclusterDirEta_;
-    static std::vector<float>  * sp_truthSimclusterDirPhi_;
+    static std::vector<float>  * sp_truthSimclusterDepEnergies_;
     static std::vector<float>  * sp_truthSimclusterDirR_;
 
 
