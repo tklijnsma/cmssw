@@ -490,11 +490,10 @@ void NTupleWindow::calculateTruthFractions(){
 
     //associate the tracks here, such that they look like hits, simple matching
     size_t trackStartIterator = recHits.size();
-    if(getMode() == useLayerClusters)
-        trackStartIterator = layerClusters_.size();
+
 
     ////match, will be improved by direct truth matching in new simclusters on longer term
-    ////assumption: for every track there is charged simcluster
+    ////assumption: for every track there is a simcluster, given the below-MIP thresholds in the HGCal
     ///*
     // *
     // * this is just a temporary solution until a proper simcluster-simtrack integration exists
@@ -502,44 +501,50 @@ void NTupleWindow::calculateTruthFractions(){
     // */
     //std::vector<size_t> usedSimclusters;
 
-    return ;
+    //return ;
 
-    float debug_ntrackwithnoSC=0;
+    std::vector<bool> hassc(tracks_.size(),false);
 
-    for(size_t i_t=0;i_t<tracks_.size();i_t++){
+    const double momentumscaler = 0;//as long as it's unreliable
+    std::vector<bool> scused(simClusters_.size(),false);
+    for(float minDistance=0.005;minDistance<=0.02;minDistance+=0.005){//rather strict
+        for(size_t i_t=0;i_t<tracks_.size();i_t++){
 
-        const double momentumscaler = 0.0001;
-        double minDistance=0.1 + 0.1;
+            //double minDistance=0.03;
 
-        size_t matchedSCIdx=simClusters_.size();
-        double distance = 0;
-        for(size_t i_sc=0;i_sc<simClusters_.size();i_sc++){
+            size_t matchedSCIdx=simClusters_.size();
 
-            double scEnergy = simClusters_.at(i_sc)->impactMomentum().E();
-            double trackMomentum = tracks_.at(i_t)->obj->p();
-            distance = reco::deltaR(simClusters_.at(i_sc)->impactPoint().Eta(),
-                    simClusters_.at(i_sc)->impactPoint().Phi(),
-                    (float)tracks_.at(i_t)->pos.eta(),
-                    (float)tracks_.at(i_t)->pos.phi()) +
-                            momentumscaler*std::abs(scEnergy - trackMomentum)/(scEnergy);
+            for(size_t i_sc=0;i_sc<simClusters_.size();i_sc++){
+                //needs improvement
+                if(scused.at(i_sc))
+                    continue;
 
-            if(distance<minDistance){
-                matchedSCIdx=i_sc;
-                minDistance=distance;
+                double scEnergy = simClusters_.at(i_sc)->impactMomentum().E();
+                double trackMomentum = tracks_.at(i_t)->obj->p();
+                double distance = reco::deltaR(simClusters_.at(i_sc)->impactPoint().Eta(),
+                        simClusters_.at(i_sc)->impactPoint().Phi(),
+                        (float)tracks_.at(i_t)->pos.eta(),
+                        (float)tracks_.at(i_t)->pos.phi()) +
+                                momentumscaler*std::abs(scEnergy - trackMomentum)/(scEnergy);
+
+                if(distance<minDistance){
+                    matchedSCIdx=i_sc;
+                    minDistance=distance;
+                }
+            }
+            if(matchedSCIdx<simClusters_.size()){
+                hassc.at(i_t)=true;
+                truthHitFractions_.at(i_t+trackStartIterator).at(matchedSCIdx) = 1.;
+                scused.at(matchedSCIdx)=true;
             }
         }
-        if(matchedSCIdx<simClusters_.size()){
-            truthHitFractions_.at(i_t+trackStartIterator).at(matchedSCIdx) = 1.;
-        }
-        else{
-            debug_ntrackwithnoSC++;
-            DEBUGPRINT(distance);
-            DEBUGPRINT(tracks_.at(i_t)->obj->p());
-            DEBUGPRINT(tracks_.at(i_t)->obj->eta());
-        }
     }
-    //DEBUGPRINT(debug_ntrackwithnoSC);
-    //DEBUGPRINT(debug_ntrackwithnoSC/(float)tracks_.size());
+    int debug_ntrackwithSC=0;
+    for(const auto& hsc:hassc)
+        if(hsc)
+            debug_ntrackwithSC++;
+    DEBUGPRINT(debug_ntrackwithSC);
+    DEBUGPRINT(debug_ntrackwithSC/(float)tracks_.size());
 }
 
 
