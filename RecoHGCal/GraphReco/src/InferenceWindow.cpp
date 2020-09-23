@@ -31,7 +31,9 @@ std::vector<InferenceWindow> InferenceWindow::createWindows(size_t nSegmentsPhi,
 }
 
 void InferenceWindow::fillFeatureArrays(){
-    float * data = 0; //inputTensor.data()
+    //FIXME
+    //float* data = inputTensor_.flat<float>().data();
+    float* data = 0;
 
     if(getMode() == useRechits){
         for(const auto& rh:recHits){
@@ -47,20 +49,52 @@ void InferenceWindow::fillFeatureArrays(){
     for(const auto& tr:tracks_){
         fillTrackFeatures(data,tr);
     }
+
     //do some zero padding if needed
-
-    //FIXME
-
+    if(getMode() == useRechits)
+    {
+        for (float i = nFeatures_*recHits.size(); i < nFeatures_*padSize_; i++, data++)
+        {
+            *data = 0.;
+        }
+    }
 }
 
 void InferenceWindow::setupTFInterface(size_t padSize, size_t nFeatures, bool batchedModel,
         const std::string& inputTensorName,
-        const std::string& outputTensorName) {
+        const std::string& outputTensorName) {    
+
+    inputTensorName_ = inputTensorName;
+    outputTensorName_ = outputTensorName;
+
+    padSize_ = padSize;
+    nFeatures_ = nFeatures;
+    //inputTensor_ = tensorflow::Tensor(tensorflow::DT_FLOAT, { 1, (int) padSize_, (int) nFeatures_ });
 
 }
 
 
 
-void InferenceWindow::evaluate(tensorflow::Session* sess) {
+// void InferenceWindow::evaluate(tensorflow::Session* sess) {
 
+//     std::vector<tensorflow::Tensor> outputs;
+//     tensorflow::run(sess, { { inputTensorName_, inputTensor_ } }, { outputTensorName_ }, &outputs);
+//     outputTensor_ = outputs[0];
+// }
+
+void InferenceWindow::evaluate() {
+
+    //FIXME
+}
+
+
+// tensorflow::Tensor InferenceWindow::getOutput(){
+
+//     return outputTensor_;
+// }
+
+void InferenceWindow::getOutput(){
+
+    //FIXME
+    
 }
