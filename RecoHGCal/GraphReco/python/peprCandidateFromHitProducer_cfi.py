@@ -29,7 +29,7 @@ peprCandidateFromHitProducer = cms.EDProducer("peprCandidateFromHitProducer",
     # dimension of the padding of the second dimension, i.e., the rec hits themselves
     padSize=cms.uint32(10000),
     # graph to the trained model
-    graphPath=cms.string("graph.pb"),
+    #graphPath=cms.string("graph.pb"),
     
     minEta=cms.double(1.6),
     maxEta=cms.double(3.0),

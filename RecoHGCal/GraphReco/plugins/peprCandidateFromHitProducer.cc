@@ -24,8 +24,6 @@
 #include "RecoLocalCalo/HGCalRecAlgos/interface/RecHitTools.h"
 //#include "HGCSimTruth/HGCSimTruth/interface/SimClusterTools.h"
 
-//#include "PhysicsTools/TensorFlow/interface/TensorFlow.h"
-
 #include "RecoHGCal/GraphReco/interface/InferenceWindow.h"
 
 #include "DataFormats/Common/interface/View.h"
@@ -47,34 +45,11 @@ using namespace ticl;
 #define WARNING std::cout << "peprCandidateFromHitProducer WARNING: "
 #define ERROR std::cout << "peprCandidateFromHitProducer ERROR  : "
 
-// // datastructure hold by edm::GlobalCache
-// struct WindowInferenceCache {
-//     WindowInferenceCache(const edm::ParameterSet& config) :
-//             graphDef(nullptr) {
-//     }
 
-//     std::atomic<tensorflow::GraphDef*> graphDef;
-// };
-
-//FIXME, to be replaced?
-struct WindowInferenceCache {
-    WindowInferenceCache(const edm::ParameterSet& config)
-    {
-    }
-};
-
-
-class peprCandidateFromHitProducer: public edm::stream::EDProducer<
-        edm::GlobalCache<WindowInferenceCache> > {
+class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
  public:
-    explicit peprCandidateFromHitProducer(const edm::ParameterSet&,
-            const WindowInferenceCache*);
+    explicit peprCandidateFromHitProducer(const edm::ParameterSet&);
     ~peprCandidateFromHitProducer();
-
-    // methods for handling the global cache
-    static std::unique_ptr<WindowInferenceCache> initializeGlobalCache(
-            const edm::ParameterSet&);
-    static void globalEndJob(const WindowInferenceCache*);
 
  private:
     void beginStream(edm::StreamID);
@@ -112,43 +87,10 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<
     size_t nEtaSegments_;
     size_t nPhiSegments_;
 
-    //FIXME, to be replaced
-    // the tensorflow session
-    //tensorflow::Session* session_;
-
-
 };
 
-std::unique_ptr<WindowInferenceCache> peprCandidateFromHitProducer::initializeGlobalCache(
-        const edm::ParameterSet& config) {
-    // this method is supposed to create, initialize and
-    //return a WindowInferenceCache instance
-    WindowInferenceCache* windowInferenceCache = new WindowInferenceCache(
-            config);
 
-    // load the graph def and save it
-    std::string graphPath = config.getParameter<std::string>("graphPath");
-    INFO<< "(FIXME) loading graph from " << graphPath << std::endl;
-    //windowInferenceCache->graphDef = tensorflow::loadGraphDef(graphPath);
-
-    // set some global configs, such as the TF log level
-    //tensorflow::setLogging("0");
-
-    return std::unique_ptr<WindowInferenceCache>(windowInferenceCache);
-}
-
-void peprCandidateFromHitProducer::globalEndJob(
-        const WindowInferenceCache* windowInferenceCache) {
-
-    //FIXME
-    // reset the graphDef
-    //if (windowInferenceCache->graphDef != nullptr) {
-    //    delete windowInferenceCache->graphDef;
-    //}
-}
-
-peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterSet& config,
-        const WindowInferenceCache* windowInferenceCache) :
+peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterSet& config) :
         recHitCollections_(config.getParameter<std::vector<edm::InputTag> >("recHitCollections")), 
         tracksToken_(consumes<edm::View<reco::Track>>(config.getParameter<edm::InputTag>("tracks"))),
         simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))),
@@ -163,7 +105,6 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
         phiFrameWidth_(config.getParameter<double>("phiFrameWidth")),
         nEtaSegments_((size_t)config.getParameter<uint32_t>("nEtaSegments")),
         nPhiSegments_((size_t)config.getParameter<uint32_t>("nPhiSegments"))
-        //session_(nullptr)
         {
 
     // sanity checks for sliding windows
@@ -177,8 +118,6 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
     produces<reco::PFCandidateCollection>();
     //produces<std::vector<Trackster>>();
 
-    // mount the graphDef stored in windowInferenceCache onto the session
-    //session_ = tensorflow::createSession(windowInferenceCache->graphDef);
 }
 
 peprCandidateFromHitProducer::~peprCandidateFromHitProducer() {
@@ -194,10 +133,6 @@ void peprCandidateFromHitProducer::beginStream(edm::StreamID streamId) {
 }
 
 void peprCandidateFromHitProducer::endStream() {
-    // close the session
-    //tensorflow::closeSession(session_);
-    //session_ = nullptr;
-
 
     windows_.clear();
 }
@@ -343,26 +278,12 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
             reco::PFCandidate::ParticleType part_type = reco::PFCandidate::X;
             candidates->emplace_back(charge, four_mom, part_type);
 
-            // Trackster tmp;
-            // //tmp.setRegressedEnergy(E);
-            // //tmp.setRawEnergy(E);
-            // //tmp.setBarycenter( math::XYZVector(X,Y,Z) );
-            // ////set to randomly chosen values
-            // std::cout << "    E =  " << E << ", X = " << X << ", Y = " << Y << ", Z = " << Z << std::endl;
-            // tmp.setRegressedEnergy(222.);
-            // tmp.setRawEnergy(222.);
-            // tmp.setBarycenter( math::XYZVector(99,99,99) );
-
-            // result->emplace_back(tmp);
-
-
         }
     //}
 
 
 
     event.put(std::move(candidates));
-    //event.put(std::move(result));
 
     std::cout << "[TEST] Results produced and put in event" << std::endl;
 
