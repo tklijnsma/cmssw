@@ -149,7 +149,7 @@ public:
 
     void clear();
 
-    virtual void fillFeatureArrays()=0;
+    void fillFeatureArrays();
 
 
     //debug functions
@@ -189,6 +189,8 @@ public:
             size_t nSegmentsEta, double minEta, double maxEta, double frameWidthEta,
             double frameWidthPhi) ;
 
+    const std::vector<std::vector<float> >&  getHitFeatures()const { return hitFeatures_;}
+
 private:
 
     mode mode_;
@@ -216,6 +218,9 @@ protected:
     std::vector<const SimCluster*> simClusters_;
     std::vector<const SimCluster*> badSimClusters_;
     std::vector<bool> simClustersInnerWindow_;
+
+    //this is the input to the model!
+    std::vector<std::vector<float> >  hitFeatures_; //this includes tracks!
 
     //for one track
     void fillTrackFeatures(float*& data, const TrackWithHGCalPos *) const;

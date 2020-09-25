@@ -177,7 +177,7 @@ void WindowInference::analyze(const edm::Event& event,
 
     // run the evaluation per window
     for (auto & window : windows_) {
-        window.evaluate(session_);
+       // window.evaluate(session_);
     }
 
     // reconstruct showers using all windows and put them into the event

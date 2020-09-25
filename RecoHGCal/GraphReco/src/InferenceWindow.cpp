@@ -30,37 +30,4 @@ std::vector<InferenceWindow> InferenceWindow::createWindows(size_t nSegmentsPhi,
             minEta,maxEta,frameWidthEta,frameWidthPhi);
 }
 
-void InferenceWindow::fillFeatureArrays(){
-    float * data = 0; //inputTensor.data()
 
-    if(getMode() == useRechits){
-        for(const auto& rh:recHits){
-            fillRecHitFeatures(data,rh);
-        }
-    }
-    else{
-        for(const auto& lc: layerClusters_){
-            fillLayerClusterFeatures(data,lc);
-        }
-    }
-    //add tracks LAST!
-    for(const auto& tr:tracks_){
-        fillTrackFeatures(data,tr);
-    }
-    //do some zero padding if needed
-
-    //FIXME
-
-}
-
-void InferenceWindow::setupTFInterface(size_t padSize, size_t nFeatures, bool batchedModel,
-        const std::string& inputTensorName,
-        const std::string& outputTensorName) {
-
-}
-
-
-
-void InferenceWindow::evaluate(tensorflow::Session* sess) {
-
-}

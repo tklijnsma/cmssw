@@ -52,6 +52,7 @@ void WindowBase::clear() {
     simClusters_.clear();
     badSimClusters_.clear();
     ticltracksters_.clear();
+    hitFeatures_.clear();
 }
 
 
@@ -115,6 +116,39 @@ void WindowBase::fillLayerClusterFeatures(float*& data, const reco::CaloCluster 
     throw std::runtime_error("WindowBase::fillLayerClusterFeatures: LC not supported anymore");
 }
 
+void WindowBase::fillFeatureArrays(){
+    //NO CUTS HERE!
+
+    hitFeatures_.clear();
+    if(getMode() == useRechits){
+        for(const auto& rh:recHits){
+            std::vector<float> feats(nRechitFeatures_);
+            auto data = &feats.at(0);
+            fillRecHitFeatures(data,rh);
+            hitFeatures_.push_back(feats);
+        }
+    }
+    else{
+        for(const auto& lc: layerClusters_){
+            std::vector<float> feats(nLayerClusterFeatures_);
+            auto data = &feats.at(0);
+            fillLayerClusterFeatures(data,lc);
+            hitFeatures_.push_back(feats);
+        }
+    }
+
+    //return;
+    //add tracks LAST!
+    for(const auto& tr:tracks_){
+        std::vector<float> feats(nTrackFeatures_);
+        auto data = &feats.at(0);
+        fillTrackFeatures(data,tr);
+        hitFeatures_.push_back(feats);
+    }
+
+
+
+}
 
 WindowBase::particle_type WindowBase::pdgToParticleType(int pdgid)const{
 

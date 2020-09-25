@@ -23,6 +23,7 @@ public:
     //0 associate all rechits etc
 
     void fillFeatureArrays();
+
     //1
     void fillTruthArrays();
     //2
@@ -56,7 +57,6 @@ private:
 
 
     //can be layer clusters or rechits according to mode
-    std::vector<std::vector<float> >  hitFeatures_; //this includes tracks!
     std::vector<float> recHitEnergy_;
     std::vector<float> recHitEta_;
     std::vector<float> recHitPhi_;
