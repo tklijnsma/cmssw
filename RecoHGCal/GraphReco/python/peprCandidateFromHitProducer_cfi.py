@@ -30,14 +30,20 @@ peprCandidateFromHitProducer = cms.EDProducer("peprCandidateFromHitProducer",
     padSize=cms.uint32(10000),
     # graph to the trained model
     #graphPath=cms.string("graph.pb"),
-    
+    pipeName=cms.string("arrayspipe"),
     minEta=cms.double(1.6),
     maxEta=cms.double(3.0),
+    # # window size in phi and eta
+    # etaFrameWidth=cms.double(0.1),
+    # phiFrameWidth=cms.double(0.1),
+    # # overlap in phi and eta
+    # nEtaSegments=cms.uint32(3),
+    # nPhiSegments=cms.uint32(1),
     # window size in phi and eta
-    etaFrameWidth=cms.double(0.1),
-    phiFrameWidth=cms.double(0.1),
+    etaFrameWidth=cms.double(100),
+    phiFrameWidth=cms.double(100),
     # overlap in phi and eta
-    nEtaSegments=cms.uint32(3),
-    nPhiSegments=cms.uint32(1),
+    nEtaSegments=cms.uint32(1),
+    nPhiSegments=cms.uint32(1),   
     # names of the input and output tensors
 )

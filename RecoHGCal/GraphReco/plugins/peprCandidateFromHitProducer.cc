@@ -57,7 +57,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     void produce(edm::Event&, const edm::EventSetup&) override;
 
     void fillWindows(const edm::Event&);
-
+    void writeInputArrays(const std::vector<std::vector<float> >&);
 
     // options
     std::vector<edm::InputTag> recHitCollections_;
@@ -72,6 +72,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     std::string outputTensorName_;
     bool batchedModel_;
     size_t padSize_;
+    std::string pipeName_;
 
     // rechit tools
     hgcal::RecHitTools recHitTools_;
@@ -87,6 +88,8 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     size_t nEtaSegments_;
     size_t nPhiSegments_;
 
+
+
 };
 
 
@@ -98,6 +101,7 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
         outputTensorName_(config.getParameter<std::string>("outputTensorName")), 
         batchedModel_(config.getParameter<bool>("batchedModel")), 
         padSize_((size_t) config.getParameter<uint32_t>("padSize")),
+        pipeName_(config.getParameter<std::string>("pipeName")), 
         //FIXME: actually these are all not needed if windows are created in the constructor!
         minEta_(config.getParameter<double>("minEta")),
         maxEta_(config.getParameter<double>("maxEta")),
@@ -134,7 +138,7 @@ void peprCandidateFromHitProducer::beginStream(edm::StreamID streamId) {
 
 void peprCandidateFromHitProducer::endStream() {
 
-    windows_.clear();
+    //windows_.clear();
 }
 
 void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSetup& setup) {
@@ -162,8 +166,13 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
     //// one tensor per window
     //std::vector<tensorflow::Tensor> windowoutputs;
     // run the evaluation per window
+    std::vector<std::vector<float> >  hitFeatures;
     for (auto & window : windows_) {
-        window.evaluate();
+
+        hitFeatures = window.getHitFeatures();
+        std::cout << "  hitFeatures size = " << hitFeatures.size() << std::endl;
+
+        //window.evaluate();
         //windowoutputs.push_back(window.getOutput());
     }
 
@@ -225,6 +234,9 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
     //     }
     // }
 
+
+//tmp commented to reduce noise
+/*
     // making candidate collection
     auto candidates = std::make_unique<reco::PFCandidateCollection>();
     std::cout << "Making PF candidates " << std::endl;
@@ -269,7 +281,7 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
             math::XYZTLorentzVector cartesian(direction.X(), direction.Y(), direction.Z(), simclusters.at(it).energy());
             //// Convert px, py, pz, E vector to CMS standard pt/eta/phi/m vector
             reco::Candidate::LorentzVector p4(cartesian);
-            
+     
 
 
             //const auto& four_mom = math::XYZTLorentzVector(X,Y,Z,E);
@@ -286,6 +298,7 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
     event.put(std::move(candidates));
 
     std::cout << "[TEST] Results produced and put in event" << std::endl;
+*/
 
     // clear all windows
     for (auto& window : windows_) {
@@ -302,7 +315,9 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
     if (!windows_.size()) {
         throw cms::Exception("NoWindows") << "no windows initialized";
     }
-
+    
+    std::cout << "Number of windows = " << windows_.size() << std::endl;
+    
     ////FIXME
     ////Window::mode windowmode = windows_.at(0).getMode();
     //// skip layer cluster or rechit loop accordingly
@@ -327,7 +342,11 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
     std::vector<size_t> filledrechits(allrechits.size(),0);
 
     // FIXME: make number of features configurable?
-    size_t nfeatures = 12;
+    //size_t nfeatures = 12;
+
+    //window.
+    //std::ofstream inputArrayStream;
+
 
     for (auto & window : windows_) {
         //fill rechits in this window
@@ -338,13 +357,22 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
         }
 
         // TF interface setup needs to be called before fillFeatureArrays, in order to do the zero padding
-        window.setupTFInterface(padSize_, nfeatures, batchedModel_, inputTensorName_, outputTensorName_);
+        //window.setupTFInterface(padSize_, nfeatures, batchedModel_, inputTensorName_, outputTensorName_);
         //FIXME to fill the actual arrays
-        //window.fillFeatureArrays(); 
+        window.fillFeatureArrays();
     }
 
 
 }
+
+
+void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vector<float> >&) {
+
+    //std::ofstream inputArrayStream("/dev/shm/inputArrays.txt"); //in RAM
+    //std::ofstream inputArrayStream("inputArrays.txt"); 
+
+}
+
 
 //remove
 
