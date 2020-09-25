@@ -163,16 +163,19 @@ void NTupleWindow::flattenRechitFeatures() {
     for (size_t i = 0; i < hitFeatures_.size(); i++) {
         recHitEnergy_.push_back(hitFeatures_[i][kEnergy]);
         recHitEta_.push_back(hitFeatures_[i][kEta]);
-        recHitPhi_.push_back(hitFeatures_[i][kPhi]);
         recHitTheta_.push_back(hitFeatures_[i][kTheta]);
         recHitR_.push_back(hitFeatures_[i][kR]);
         recHitX_.push_back(hitFeatures_[i][kx]);
         recHitY_.push_back(hitFeatures_[i][ky]);
         recHitZ_.push_back(hitFeatures_[i][kz]);
-        recHitDetID_.push_back(hitFeatures_[i][kDetid]);
         recHitTime_.push_back(hitFeatures_[i][kTime]);
         recHitID_.push_back(hitFeatures_[i][kId]);
-        recHitPad_.push_back(hitFeatures_[i][kPad]);
+
+        math::XYZTLorentzVectorF v(hitFeatures_[i][kx],hitFeatures_[i][ky],hitFeatures_[i][kz],0);
+
+        recHitPad_.push_back(0);
+        recHitPhi_.push_back(v.phi());
+        recHitDetID_.push_back(0);
     }
 }
 
