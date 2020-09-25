@@ -22,7 +22,9 @@ public:
         parentMomentum_(math::XYZVectorD(0., 0., 0.)),
         tkSurfacePosition_(math::XYZVectorD(0., 0., 0.)),
         tkSurfaceMomentum_(math::XYZTLorentzVectorD(0., 0., 0., 0.)),
-        crossedBoundary_(false) {}
+        crossedBoundary_(false),
+        hasCorrectedMomentumAtBoundary_(false)
+        {}
 
   G4SimTrack(int iid, int ipart, const math::XYZVectorD& ip, double ie, int iv, int ig, const math::XYZVectorD& ipmom)
       : id_(iid),
@@ -34,7 +36,9 @@ public:
         parentMomentum_(ipmom),
         tkSurfacePosition_(math::XYZVectorD(0., 0., 0.)),
         tkSurfaceMomentum_(math::XYZTLorentzVectorD(0., 0., 0., 0.)),
-        crossedBoundary_(false) {}
+        crossedBoundary_(false),
+        hasCorrectedMomentumAtBoundary_(false)
+        {}
 
   G4SimTrack(int iid,
              int ipart,
@@ -54,7 +58,9 @@ public:
         parentMomentum_(ipmom),
         tkSurfacePosition_(tkpos),
         tkSurfaceMomentum_(tkmom),
-        crossedBoundary_(false) {}
+        crossedBoundary_(false),
+        hasCorrectedMomentumAtBoundary_(false)
+        {}
 
   ~G4SimTrack() {}
 
@@ -93,6 +99,15 @@ public:
     assertCrossedBoundary();
     return idAtBoundary_;
     }
+  // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
+  bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
+  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+    return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
+    }
+  void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
+    hasCorrectedMomentumAtBoundary_ = true;
+    correctedMomentumAtBoundary_ = corrMom;
+    }
 
 private:
   int id_;
@@ -109,6 +124,8 @@ private:
   int idAtBoundary_;
   math::XYZVectorD positionAtBoundary_;
   math::XYZTLorentzVectorD momentumAtBoundary_;
+  bool hasCorrectedMomentumAtBoundary_;
+  math::XYZTLorentzVectorD correctedMomentumAtBoundary_;
   void assertCrossedBoundary() const {
     if (!crossedBoundary_){
       throw cms::Exception("Unknown", "G4SimTrack")

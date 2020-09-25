@@ -12,6 +12,7 @@
 
 #include "G4UImanager.hh"
 #include "G4TrackingManager.hh"
+#include "G4SystemOfUnits.hh"
 
 //#define EDM_ML_DEBUG
 
@@ -43,19 +44,30 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
   }
 
   if (doFineCalo_){
-    edm::LogVerbatim("DoFineCalo") << "PreUserTrackingAction for track " << aTrack->GetTrackID() << " at address " << aTrack;
+    edm::LogVerbatim("DoFineCalo")
+      << "PreUserTrackingAction: Start processing track " << aTrack->GetTrackID()
+      << " pdgid=" << aTrack->GetDefinition()->GetPDGEncoding()
+      << " ekin[GeV]=" << aTrack->GetKineticEnergy() / CLHEP::GeV
+      << " z[cm]=" << aTrack->GetPosition().z() / CLHEP::cm
+      << " vertexz[cm]=" << aTrack->GetVertexPosition().z() / CLHEP::cm
+      << " parentid=" << aTrack->GetParentID()
+      ;
+    // Always save primaries
+    // Decays from primaries are marked as primaries (see NewTrackAction), but are not saved by
+    // default, which may lead to hits without a parent. This is illegal for doFineCalo.
+    if (trkInfo->isPrimary()) currentTrack_->save();
     if (
       ( aTrack->GetDefinition()->GetPDGEncoding() == 22 || std::abs(aTrack->GetDefinition()->GetPDGEncoding()) == 11 )
-      && std::abs(aTrack->GetVertexPosition().z()) >= 3205.
-      && std::abs(aTrack->GetVertexPosition().z()) < 3500.
-      && aTrack->GetKineticEnergy() >= 5.
+      && std::abs(aTrack->GetVertexPosition().z()) / CLHEP::cm >= 320.5
+      && std::abs(aTrack->GetVertexPosition().z()) / CLHEP::cm < 350.
+      && aTrack->GetKineticEnergy() / CLHEP::GeV >= 0.2
       && isPrimary(aTrack->GetParentID())
       ){
         edm::LogVerbatim("DoFineCalo")
           << "PreUserTrackingAction: Track " << aTrack->GetTrackID()
           << " pdgid=" << aTrack->GetDefinition()->GetPDGEncoding()
-          << " ekin=" << aTrack->GetKineticEnergy()
-          << " z=" << aTrack->GetPosition().z()
+          << " ekin[GeV]=" << aTrack->GetKineticEnergy() / CLHEP::GeV
+          << " z[cm]=" << aTrack->GetPosition().z() / CLHEP::cm
           << " parentid=" << aTrack->GetParentID()
           << " fits fineCalo truth splitting criterion"
           ;
@@ -67,7 +79,6 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
 }
 
 void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
-  edm::LogVerbatim("DoFineCalo") << "PostUserTrackingAction for track " << aTrack->GetTrackID() << " at address " << aTrack;
   if (eventAction_->trackContainer() != nullptr) {
     uint32_t id = aTrack->GetTrackID();
     math::XYZVectorD pos(
@@ -79,12 +90,11 @@ void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
     std::pair<math::XYZVectorD, math::XYZTLorentzVectorD> p(pos, mom);
 
 #ifdef EDM_ML_DEBUG
-    edm::LogInfo("DoFineCalo")
+    edm::LogVerbatim("DoFineCalo")
       << "PostUserTrackingAction:"
       << " aTrack->GetTrackID()=" << aTrack->GetTrackID()
       << " currentTrack_->saved()=" << currentTrack_->saved()
-      << " PostStepPosition=("
-      << pos.x() << "," << pos.y() << "," << pos.z() << ")"
+      << " PostStepPosition=(" << pos.x() << "," << pos.y() << "," << pos.z() << ")"
       ;
 #endif
 
@@ -94,14 +104,14 @@ void TrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
         currentTrack_->save();
         currentTrack_->setCrossedBoundaryPosMom(id, trkInfo->getPositionAtBoundary(), trkInfo->getMomentumAtBoundary());
 #ifdef EDM_ML_DEBUG
-        edm::LogInfo("DoFineCalo")
+        edm::LogVerbatim("DoFineCalo")
           << "PostUserTrackingAction:"
           << " Track " << aTrack->GetTrackID()
           << " crossed boundary; pos=("
             << trkInfo->getPositionAtBoundary().x() << ","
             << trkInfo->getPositionAtBoundary().y() << ","
             << trkInfo->getPositionAtBoundary().z() << ")"
-          << " mom=("
+          << " mom[GeV]=("
             << trkInfo->getMomentumAtBoundary().x() << ","
             << trkInfo->getMomentumAtBoundary().y() << ","
             << trkInfo->getMomentumAtBoundary().z() << ","

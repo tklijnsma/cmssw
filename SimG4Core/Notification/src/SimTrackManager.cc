@@ -148,6 +148,7 @@ void SimTrackManager::reallyStoreTracks(G4SimEvent* simEvent) {
       tcinfo.second);
     if (trkH->crossedBoundary())
       g4simtrack->setCrossedBoundaryPosMom(trkH->getIDAtBoundary(), trkH->getPositionAtBoundary(), trkH->getMomentumAtBoundary());
+    if (trkH->hasCorrectedMomentumAtBoundary()) g4simtrack->setCorrectedMomentumAtBoundary(trkH->getCorrectedMomentumAtBoundary());
     simEvent->add(g4simtrack);
   }
 }

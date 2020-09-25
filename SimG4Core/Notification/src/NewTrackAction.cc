@@ -20,7 +20,6 @@ void NewTrackAction::secondary(const G4Track *aSecondary, const G4Track &mother,
 }
 
 void NewTrackAction::secondary(G4Track *aSecondary, const G4Track &mother, int flag) const {
-  edm::LogVerbatim("DoFineCalo") << "NewTrackAction::secondary for track " << aSecondary->GetTrackID()  << " at address " << aSecondary << " from parent " << mother.GetTrackID();
   if (aSecondary->GetParentID() != mother.GetTrackID())
     throw SimG4Exception("NewTrackAction: secondary parent ID does not match mother id");
   TrackInformationExtractor extractor;
@@ -48,6 +47,7 @@ void NewTrackAction::addUserInfoToSecondary(G4Track *aTrack, const TrackInformat
   TrackInformation *trkInfo = new TrackInformation();
 
   math::XYZTLorentzVectorD momentumAtCreation = motherInfo.momentumAtCreation(aTrack);
+#ifdef EDM_ML_DEBUG  
   edm::LogVerbatim("DoFineCalo")
     << "Secondary " << aTrack->GetTrackID() << " (address " << aTrack << ")"
     << " has parent " << aTrack->GetParentID()
@@ -57,6 +57,7 @@ void NewTrackAction::addUserInfoToSecondary(G4Track *aTrack, const TrackInformat
     << momentumAtCreation.Pz() << ","
     << momentumAtCreation.E() << ")"
     ;
+#endif
   trkInfo->setParentMomentumAtCreation(momentumAtCreation);
 
   //  LogDebug("SimG4CoreApplication") << "NewTrackAction called for "

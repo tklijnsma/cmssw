@@ -67,6 +67,15 @@ public:
     assertCrossedBoundary();
     return idAtBoundary_;
     }
+  // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
+  bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
+  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+    return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
+    }
+  void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
+    hasCorrectedMomentumAtBoundary_ = true;
+    correctedMomentumAtBoundary_ = corrMom;
+    }
 
 private:
   int ivert;
@@ -79,6 +88,9 @@ private:
   int idAtBoundary_;
   math::XYZVectorD positionAtBoundary_;
   math::XYZTLorentzVectorD momentumAtBoundary_;
+  bool hasCorrectedMomentumAtBoundary_;
+  math::XYZTLorentzVectorD correctedMomentumAtBoundary_;
+  
   void assertCrossedBoundary() const {
     if (!crossedBoundary_){
       throw cms::Exception("Unknown", "SimTrack")

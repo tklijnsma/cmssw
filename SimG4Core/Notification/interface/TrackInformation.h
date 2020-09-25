@@ -66,15 +66,17 @@ public:
   // Boundary crossing variables
   void setCrossedBoundary(const G4Track* track){
     crossedBoundary_ = true;
-    // Double-check units! Any conversions necessary? Is x,y,z,E fine for XYZTLorentzVectorD?
     idAtBoundary_ = track->GetTrackID();
     positionAtBoundary_ = math::XYZVectorD(
-      track->GetPosition().x(),
-      track->GetPosition().y(),
-      track->GetPosition().z()
+      track->GetPosition().x() / CLHEP::cm,
+      track->GetPosition().y() / CLHEP::cm,
+      track->GetPosition().z() / CLHEP::cm
       );
     momentumAtBoundary_ = math::XYZTLorentzVectorD(
-      track->GetMomentum().x(), track->GetMomentum().y(), track->GetMomentum().z(), track->GetKineticEnergy()
+      track->GetMomentum().x() / CLHEP::GeV,
+      track->GetMomentum().y() / CLHEP::GeV,
+      track->GetMomentum().z() / CLHEP::GeV,
+      track->GetKineticEnergy() / CLHEP::GeV
       );
     }
   bool crossedBoundary() const { return crossedBoundary_; }
@@ -90,6 +92,16 @@ public:
     assertCrossedBoundary();
     return idAtBoundary_;
     }
+  // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
+  bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
+  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+    return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
+    }
+  void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
+    hasCorrectedMomentumAtBoundary_ = true;
+    correctedMomentumAtBoundary_ = corrMom;
+    }
+
 
   // Generator information
   int genParticlePID() const { return genParticlePID_; }
@@ -110,22 +122,26 @@ public:
 
   void insertMomentumAtCreationSecondary(const G4Track* secondary, const G4Track* mother){
     if (momentumAtCreationSecondaryMap_.count(secondary) > 0) { return; } // If already in map, don't add again
+#ifdef EDM_ML_DEBUG
     edm::LogVerbatim("DoFineCalo")
       << "Mother " << mother->GetTrackID()
       << ": Inserting momentumAtCreation for secondary " << secondary->GetTrackID()
       << " (address " << secondary << ")"
-      << " momentumAtCreation=("
-      << mother->GetMomentum().x() << ","
-      << mother->GetMomentum().y() << ","
-      << mother->GetMomentum().z() << ","
-      << mother->GetKineticEnergy() << ")"
-      << " Esecondary=" << secondary->GetKineticEnergy()
+      << " momentumAtCreation[GeV]=("
+      << mother->GetMomentum().x() / CLHEP::GeV << ","
+      << mother->GetMomentum().y() / CLHEP::GeV << ","
+      << mother->GetMomentum().z() / CLHEP::GeV << ","
+      << mother->GetKineticEnergy() / CLHEP::GeV << ")"
+      << " Esecondary[GeV]=" << secondary->GetKineticEnergy() / CLHEP::GeV
       ;
+#endif
     momentumAtCreationSecondaryMap_.insert(
       std::pair<const G4Track*, math::XYZTLorentzVectorD>(
         secondary, math::XYZTLorentzVectorD(
-          mother->GetMomentum().x(), mother->GetMomentum().y(), mother->GetMomentum().z(),
-          mother->GetKineticEnergy()
+          mother->GetMomentum().x() / CLHEP::GeV,
+          mother->GetMomentum().y() / CLHEP::GeV,
+          mother->GetMomentum().z() / CLHEP::GeV,
+          mother->GetKineticEnergy() / CLHEP::GeV
           )
         )
       );
@@ -143,6 +159,7 @@ public:
     return momentumAtCreationPair->second;
     }
 
+  bool hasParentMomentumAtCreation() const {return hasParentMomentumAtCreation_;}
   math::XYZTLorentzVectorD parentMomentumAtCreation() const {
     if (!hasParentMomentumAtCreation_)
       throw cms::Exception("Unknown", "TrackInformation")
@@ -170,6 +187,8 @@ private:
   bool idAtBoundary_;
   math::XYZVectorD positionAtBoundary_;
   math::XYZTLorentzVectorD momentumAtBoundary_;
+  bool hasCorrectedMomentumAtBoundary_;
+  math::XYZTLorentzVectorD correctedMomentumAtBoundary_;
   bool flagCaloSplittingCriterion_;
 
   int genParticlePID_, caloSurfaceParticlePID_;

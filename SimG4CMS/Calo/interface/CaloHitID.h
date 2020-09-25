@@ -25,6 +25,7 @@ public:
   void setID(uint32_t unitID, double timeSlice, int trackID, uint16_t depth = 0);
   void reset();
 
+  void overwriteTrackID(int trackID){ theTrackID = trackID; }
   bool hasFineTrackID() const { return hasFineTrackID_; }
   void setFineTrackID(int fineTrackID){
     theFineTrackID = fineTrackID;

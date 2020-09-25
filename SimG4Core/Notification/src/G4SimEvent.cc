@@ -59,6 +59,7 @@ void G4SimEvent::load(edm::SimTrackContainer& c) const {
     t.setEventId(EncodedEventId(0));
     if (trk->crossedBoundary())
       t.setCrossedBoundaryPosMom(trk->getIDAtBoundary(), trk->getPositionAtBoundary(), trk->getMomentumAtBoundary());
+    if (trk->hasCorrectedMomentumAtBoundary()) t.setCorrectedMomentumAtBoundary(trk->getCorrectedMomentumAtBoundary());
     c.push_back(t);
   }
   std::stable_sort(c.begin(), c.end(), IdSort());

@@ -187,8 +187,6 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
     throw cms::Exception("Unknown", "CaloTrkProcessing") << "cannot get trkInfo for Track " << id << "\n";
   }
 
-  edm::LogVerbatim("DoFineCalo") << "CaloTrkProcessing for track " << theTrack->GetTrackID() << " at address " << theTrack;
-
   if (doFineCalo_){
     // Store current momentum whenever a secondary is created in the trkInfo
     const std::vector<const G4Track*>* secondaries = aStep->GetSecondaryInCurrentStep();
@@ -197,31 +195,6 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
       trkInfo->insertMomentumAtCreationSecondary(secondary, theTrack);
       }
     }
-
-  // else {
-  //   std::map< const G4Track*, math::XYZTLorentzVectorD >::iterator motherMomentumAtCreationPair = motherMomentumAtCreationMap_.find(theTrack);
-  //   if ( motherMomentumAtCreationPair == motherMomentumAtCreationMap_.end() ) {
-  //     edm::LogVerbatim("DoFineCalo")
-  //       << "  Non-primary track " << theTrack->GetTrackID()
-  //       << " at address " << theTrack
-  //       << " from parent " << theTrack->GetParentID()
-  //       << " has no motherMomentumAtCreation"
-  //       ;
-  //     }
-  //   else {
-  //     math::XYZTLorentzVectorD motherMomentumAtCreation = motherMomentumAtCreationPair->second;
-  //     edm::LogVerbatim("DoFineCalo")
-  //       << "  Non-primary track " << theTrack->GetTrackID()
-  //       << " at address " << theTrack
-  //       << " has parent " << theTrack->GetParentID()
-  //       << "; parent momentum @ creation: ("
-  //       << motherMomentumAtCreation.Px() << ","
-  //       << motherMomentumAtCreation.Py() << ","
-  //       << motherMomentumAtCreation.Pz() << ","
-  //       << motherMomentumAtCreation.E() << ")"
-  //       ;
-  //     }
-  //   }
 
   if (doFineCalo_ || storeAllTracksCalo_) {
     // Boundary-crossing logic
@@ -233,30 +206,30 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
       // Require abs(pre z position) < abs(current z position) to prevent back scattering tracks from being counted
       && std::abs(theTrack->GetStep()->GetPreStepPoint()->GetPosition().z()) < std::abs(theTrack->GetPosition().z())
       ) {
-      edm::LogInfo("DoFineCalo")
+      edm::LogVerbatim("DoFineCalo")
         << "Crossed boundary:"
         << " Track " << id
         << " pdgid=" << theTrack->GetDefinition()->GetPDGEncoding()
         << " prestepLV=" << prestepLV
         << " poststepLV=" << poststepLV
-        << " GetKineticEnergy=" << theTrack->GetKineticEnergy()
-        << " GetVertexKineticEnergy=" << theTrack->GetVertexKineticEnergy()
-        << " prestepPosition=("
-          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().x() << ","
-          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().y() << ","
-          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().z() << ")"
-        << " poststepPosition=("
-          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().x() << ","
-          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().y() << ","
-          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().z() << ")"
-        << " position=("
-          << theTrack->GetPosition().x() << ","
-          << theTrack->GetPosition().y() << ","
-          << theTrack->GetPosition().z() << ")"
-        << " vertex_position=("
-          << theTrack->GetVertexPosition().x() << ","
-          << theTrack->GetVertexPosition().y() << ","
-          << theTrack->GetVertexPosition().z() << ")"
+        << " GetKineticEnergy[GeV]=" << theTrack->GetKineticEnergy() / CLHEP::GeV
+        << " GetVertexKineticEnergy[GeV]=" << theTrack->GetVertexKineticEnergy() / CLHEP::GeV
+        << " prestepPosition[cm]=("
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().z() / CLHEP::cm << ")"
+        << " poststepPosition[cm]=("
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().z() / CLHEP::cm << ")"
+        << " position[cm]=("
+          << theTrack->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetPosition().z() / CLHEP::cm << ")"
+        << " vertex_position[cm]=("
+          << theTrack->GetVertexPosition().x() / CLHEP::cm << ","
+          << theTrack->GetVertexPosition().y() / CLHEP::cm << ","
+          << theTrack->GetVertexPosition().z() / CLHEP::cm << ")"
         ;
       trkInfo->setCrossedBoundary(theTrack);
       }
@@ -269,15 +242,15 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
       edm::LogInfo("DoFineCalo")
         << "Putting in history:"
         << " Track " << id
-        << " vertex=("
-          << theTrack->GetVertexPosition().x() << ","
-          << theTrack->GetVertexPosition().y() << ","
-          << theTrack->GetVertexPosition().z() << ")"
-        << " position=("
-          << theTrack->GetPosition().x() << ","
-          << theTrack->GetPosition().y() << ","
-          << theTrack->GetPosition().z() << ")"
-        << " energy=" << theTrack->GetKineticEnergy()
+        << " vertex[cm]=("
+          << theTrack->GetVertexPosition().x() / CLHEP::cm << ","
+          << theTrack->GetVertexPosition().y() / CLHEP::cm << ","
+          << theTrack->GetVertexPosition().z() / CLHEP::cm << ")"
+        << " position[cm]=("
+          << theTrack->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetPosition().z() / CLHEP::cm << ")"
+        << " energy[GeV]=" << theTrack->GetKineticEnergy() / CLHEP::GeV
         << " getIDfineCalo=" << trkInfo->getIDfineCalo()
         << " getIDonCaloSurface=" << trkInfo->getIDonCaloSurface()
         << " parentID=" << theTrack->GetParentID()

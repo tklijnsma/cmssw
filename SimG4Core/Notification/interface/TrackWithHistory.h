@@ -5,6 +5,7 @@
 #include "FWCore/Utilities/interface/Exception.h"
 #include "DataFormats/Math/interface/Vector3D.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "G4Allocator.hh"
 
@@ -68,9 +69,43 @@ public:
     assertCrossedBoundary();
     return idAtBoundary_;
     }
+  // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
+  bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
+  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+    return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
+    }
+  void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
+    // Don't overwrite if new 4-mom has a higher energy
+    if (hasCorrectedMomentumAtBoundary_ && corrMom.E() > correctedMomentumAtBoundary_.E()){
+#ifdef EDM_ML_DEBUG
+      edm::LogVerbatim("DoFineCalo") << "Not overwriting correctedMomentumAtBoundary for track " << trackID_;
+#endif
+      return;
+      }
+    hasCorrectedMomentumAtBoundary_ = true;
+    correctedMomentumAtBoundary_ = corrMom;
+    edm::LogVerbatim("DoFineCalo")
+      << "Setting track " << trackID_ << " correctedMomentumAtBoundary[GeV]=("
+      << corrMom.Px() << ","
+      << corrMom.Py() << ","
+      << corrMom.Pz() << ","
+      << corrMom.E() << ")"
+      ;
+    }
+
+  void setParentMomentumAtCreation(math::XYZTLorentzVectorD fparentMomentum) {
+    hasParentMomentumAtCreation_ = true;
+    parentMomentumAtCreation_ = fparentMomentum;
+    }
+  math::XYZTLorentzVectorD parentMomentumAtCreation() const {
+    if (!hasParentMomentumAtCreation_) throw cms::Exception("Unknown", "TrackWithHistory")
+        << "parentMomentumAtCreation called for track " << trackID_ << ", but it is not set";
+    return parentMomentumAtCreation_;
+    }
 
   bool passesCaloSplittingCriterion() const { return flagCaloSplittingCriterion_; }
   void setPassesCaloSplittingCriterion() { flagCaloSplittingCriterion_ = true; }
+
 
   /** Internal consistency check (optional).
      *  Method called at PostUserTrackingAction time, to check
@@ -101,6 +136,10 @@ private:
   int idAtBoundary_;
   math::XYZVectorD positionAtBoundary_;
   math::XYZTLorentzVectorD momentumAtBoundary_;
+  bool hasCorrectedMomentumAtBoundary_;
+  math::XYZTLorentzVectorD correctedMomentumAtBoundary_;
+  bool hasParentMomentumAtCreation_;
+  math::XYZTLorentzVectorD parentMomentumAtCreation_;
 
   int extractGenID(const G4Track *gt) const;
 
