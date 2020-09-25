@@ -163,16 +163,19 @@ void NTupleWindow::flattenRechitFeatures() {
     for (size_t i = 0; i < hitFeatures_.size(); i++) {
         recHitEnergy_.push_back(hitFeatures_[i][kEnergy]);
         recHitEta_.push_back(hitFeatures_[i][kEta]);
-        recHitPhi_.push_back(hitFeatures_[i][kPhi]);
         recHitTheta_.push_back(hitFeatures_[i][kTheta]);
         recHitR_.push_back(hitFeatures_[i][kR]);
         recHitX_.push_back(hitFeatures_[i][kx]);
         recHitY_.push_back(hitFeatures_[i][ky]);
         recHitZ_.push_back(hitFeatures_[i][kz]);
-        recHitDetID_.push_back(hitFeatures_[i][kDetid]);
         recHitTime_.push_back(hitFeatures_[i][kTime]);
         recHitID_.push_back(hitFeatures_[i][kId]);
-        recHitPad_.push_back(hitFeatures_[i][kPad]);
+
+        math::XYZTLorentzVectorF v(hitFeatures_[i][kx],hitFeatures_[i][ky],hitFeatures_[i][kz],0);
+
+        recHitPad_.push_back(0);
+        recHitPhi_.push_back(v.phi());
+        recHitDetID_.push_back(0);
     }
 }
 
@@ -308,35 +311,7 @@ void NTupleWindow::clear(){
 
 void NTupleWindow::fillFeatureArrays(){
     //NO CUTS HERE!
-
-    hitFeatures_.clear();
-    if(getMode() == useRechits){
-        for(const auto& rh:recHits){
-            std::vector<float> feats(nRechitFeatures_);
-            auto data = &feats.at(0);
-            fillRecHitFeatures(data,rh);
-            hitFeatures_.push_back(feats);
-        }
-    }
-    else{
-        for(const auto& lc: layerClusters_){
-            std::vector<float> feats(nLayerClusterFeatures_);
-            auto data = &feats.at(0);
-            fillLayerClusterFeatures(data,lc);
-            hitFeatures_.push_back(feats);
-        }
-    }
-
-    //return;
-    //add tracks LAST!
-    for(const auto& tr:tracks_){
-        std::vector<float> feats(nTrackFeatures_);
-        auto data = &feats.at(0);
-        fillTrackFeatures(data,tr);
-        hitFeatures_.push_back(feats);
-    }
-
-
+    WindowBase::fillFeatureArrays();
     createDetIDHitAssociation();
 
 }

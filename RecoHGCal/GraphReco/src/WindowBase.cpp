@@ -52,61 +52,103 @@ void WindowBase::clear() {
     simClusters_.clear();
     badSimClusters_.clear();
     ticltracksters_.clear();
+    hitFeatures_.clear();
 }
 
 
 
 //// private ////
 
-const size_t WindowBase::nTrackFeatures_=12;
+/*
+ * recHitEnergy,
+   recHitEta   ,
+   recHitID, #indicator if it is track or not
+   recHitTheta ,
+   recHitR   ,
+   recHitX     ,
+   recHitY     ,
+   recHitZ     ,
+   recHitTime
+ */
+
+
+const size_t WindowBase::nTrackFeatures_=9;
 void WindowBase::fillTrackFeatures(float*& data, const TrackWithHGCalPos * t) const {
     *(data++) = t->obj->p();
     *(data++) = t->pos.eta();
-    *(data++) = t->pos.phi();
+    *(data++) = -1.; //"detid"
     *(data++) = t->pos.theta();
     *(data++) = t->pos.mag();
     *(data++) = t->pos.x();
     *(data++) = t->pos.y();
     *(data++) = t->pos.z();
-    *(data++) = t->obj->charge();
     *(data++) = t->obj->chi2();
-    *(data++) = -1.; //track ID bit
-    *(data++) = 0.; //pad
 }
 
-const size_t WindowBase::nRechitFeatures_=12;
+/*
+ * recHitEnergy,
+   recHitEta   ,
+   recHitID, #indicator if it is track or not
+   recHitTheta ,
+   recHitR   ,
+   recHitX     ,
+   recHitY     ,
+   recHitZ     ,
+   recHitTime
+ */
+
+const size_t WindowBase::nRechitFeatures_=9;
 void WindowBase::fillRecHitFeatures(float*& data, const HGCRecHitWithPos * recHit) const {
     *(data++) = recHit->hit->energy();
     *(data++) = recHit->pos.eta();
-    *(data++) = recHit->pos.phi();
+    *(data++) = 0; //ID track or not
     *(data++) = recHit->pos.theta();
     *(data++) = recHit->pos.mag();
     *(data++) = recHit->pos.x();
     *(data++) = recHit->pos.y();
     *(data++) = recHit->pos.z();
-    *(data++) = (float)recHit->hit->detid();
     *(data++) = recHit->hit->time();
-    *(data++) = 0.; //rechit ID bit
-    *(data++) = 0.; //pad
 }
 
 
-const size_t WindowBase::nLayerClusterFeatures_=12;
+const size_t WindowBase::nLayerClusterFeatures_=9;
 void WindowBase::fillLayerClusterFeatures(float*& data, const reco::CaloCluster * cl) const {
-    *(data++) = cl->energy();
-    *(data++) = cl->eta();
-    *(data++) = cl->phi();
-    *(data++) = cl->position().theta();
-    *(data++) = std::sqrt(cl->position().Mag2());
-    *(data++) = cl->position().x();
-    *(data++) = cl->position().y();
-    *(data++) = cl->position().z();
-    *(data++) = 0; //pad
-    *(data++) = 0; //pad
-    *(data++) = 1.; //layer cluster ID bit
-    *(data++) = 0; //pad
+    throw std::runtime_error("WindowBase::fillLayerClusterFeatures: LC not supported anymore");
 }
 
+void WindowBase::fillFeatureArrays(){
+    //NO CUTS HERE!
+
+    hitFeatures_.clear();
+    if(getMode() == useRechits){
+        for(const auto& rh:recHits){
+            std::vector<float> feats(nRechitFeatures_);
+            auto data = &feats.at(0);
+            fillRecHitFeatures(data,rh);
+            hitFeatures_.push_back(feats);
+        }
+    }
+    else{
+        for(const auto& lc: layerClusters_){
+            std::vector<float> feats(nLayerClusterFeatures_);
+            auto data = &feats.at(0);
+            fillLayerClusterFeatures(data,lc);
+            hitFeatures_.push_back(feats);
+        }
+    }
+
+    //return;
+    //add tracks LAST!
+    for(const auto& tr:tracks_){
+        std::vector<float> feats(nTrackFeatures_);
+        auto data = &feats.at(0);
+        fillTrackFeatures(data,tr);
+        hitFeatures_.push_back(feats);
+    }
+
+
+
+}
 
 WindowBase::particle_type WindowBase::pdgToParticleType(int pdgid)const{
 

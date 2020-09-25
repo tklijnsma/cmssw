@@ -71,6 +71,9 @@ private:
   edm::EDGetTokenT<std::vector<SimVertex>> simVertexToken_;
   edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
 
+  //just for debugging
+  std::vector<edm::EDGetTokenT<HGCRecHitCollection>> recHitTokens_;
+
   HGCalParticlePropagator prop_;
 
 };
@@ -81,6 +84,13 @@ void CaloParticleSimClusterMerger::fillDescriptions(edm::ConfigurationDescriptio
   desc.add<edm::InputTag>("caloParticleCollection", edm::InputTag("mix", "MergedCaloTruth"));
   desc.add<edm::InputTag>("simVertexCollection", edm::InputTag("g4SimHits"));
   desc.add<edm::InputTag>("simClusterCollection", edm::InputTag("mix", "MergedCaloTruth"));
+
+  desc.add<std::vector<edm::InputTag> >("recHitCollections",
+                                         {
+                                             edm::InputTag("HGCalRecHit", "HGCEERecHits"),
+                                             edm::InputTag("HGCalRecHit", "HGCHEFRecHits"),
+                                             edm::InputTag("HGCalRecHit", "HGCHEBRecHits"),
+                                         });
 
   descriptions.add("CaloParticleSimClusterMerger", desc);
 }
@@ -93,6 +103,10 @@ CaloParticleSimClusterMerger::CaloParticleSimClusterMerger(const edm::ParameterS
           simClusterToken_(consumes<std::vector<SimCluster>>(params.getParameter<edm::InputTag>("simClusterCollection")))
        {
 
+    for (auto& recHitCollection : params.getParameter<std::vector<edm::InputTag>>("recHitCollections")) {
+        recHitTokens_.push_back(consumes<HGCRecHitCollection>(recHitCollection));
+    }
+
   produces<std::vector<SimCluster>>();                // SimClusters
 }
 
@@ -101,6 +115,22 @@ CaloParticleSimClusterMerger::~CaloParticleSimClusterMerger() {}
 void CaloParticleSimClusterMerger::beginStream(edm::StreamID) {}
 
 void CaloParticleSimClusterMerger::endStream() {}
+
+
+double getSimClusterEnergy(const SimCluster& sc, const std::vector<const HGCRecHit*>& allrechits,
+        const std::unordered_map<DetId, size_t>& detid_to_rh_index){
+
+    double totalscen=0;
+    auto haf = sc.hits_and_fractions();
+    for(const auto hf:haf){
+        auto pos = detid_to_rh_index.find(hf.first);
+        if(pos == detid_to_rh_index.end()) //edges or not included in layer clusters
+            continue;
+        size_t idx = pos->second;
+        totalscen += hf.second * allrechits.at(idx)->energy();
+    }
+    return totalscen;
+}
 
 void CaloParticleSimClusterMerger::produce(edm::Event& event, const edm::EventSetup& setup) {
 
@@ -179,6 +209,38 @@ void CaloParticleSimClusterMerger::produce(edm::Event& event, const edm::EventSe
   std::cout << "total simclusters: " << simClusters.size() << " associated to calo particles " << ntotal<< std::endl;
 
   event.put(std::move(outSimClusters));
+
+
+  /////DEBUG
+  std::vector<const HGCRecHit*> allrechits;
+  std::unordered_map<DetId, size_t> detid_to_rh_index;
+  size_t rhindex = 0;
+  for (auto& token : recHitTokens_) {
+      for (const auto& rh : event.get(token)) {
+          detid_to_rh_index[rh.detid()] = rhindex;
+          rhindex++;
+          allrechits.push_back(&rh);
+      }
+  }
+
+  double totalen=0;
+  for(const auto& sc: simClusters)
+      totalen+=getSimClusterEnergy(sc,allrechits,detid_to_rh_index);
+
+  double totalcaloassoen=0;
+  for(const auto& cp: caloParticles){
+      for(const auto& sc: cp.simClusters()){
+          totalcaloassoen+=getSimClusterEnergy(*sc,allrechits,detid_to_rh_index);
+      }
+  }
+
+  std::cout << "total associated energy "<< totalcaloassoen << " total SC energy " << totalen
+          << " fraction associated " << totalcaloassoen/totalen * 100. << std::endl;
+
+
+
+
+
 }
 
 

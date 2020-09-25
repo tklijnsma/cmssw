@@ -9,7 +9,6 @@
 #define SRC_RECOHGCAL_GRAPHRECO_INTERFACE_INFERENCEWINDOW_H_
 
 #include "../interface/WindowBase.h"
-//#include "PhysicsTools/TensorFlow/interface/TensorFlow.h"
 
 class InferenceWindow: public WindowBase {
 public:
@@ -20,19 +19,11 @@ public:
 
     ~InferenceWindow();
 
-    void setupTFInterface(size_t padSize, size_t nFeatures, bool batchedModel,
-            const std::string& inputTensorName,
-            const std::string& outputTensorName);
 
-    void fillFeatureArrays();
 
-    //void evaluate(tensorflow::Session* sess);
     void evaluate();
 
-    //tensorflow::Tensor getOutput();
-    void getOutput();
-
-    void flattenRechitFeatures();
+    void getOutput() const{}//needs output format etc.
 
     static std::vector<InferenceWindow> createWindows(size_t nSegmentsPhi,
             size_t nSegmentsEta, double minEta, double maxEta, double frameWidthEta,
@@ -42,16 +33,8 @@ private:
 
     InferenceWindow(){}
     //
-    //Inference  
-    //tensorflow::Tensor inputTensor_;
-    //tensorflow::NamedTensorList inputTensorList_;
-    //tensorflow::Tensor outputTensor_;
-    std::string inputTensorName_;
-    std::string outputTensorName_;
+    //Inference
 
-    size_t padSize_;
-    size_t nFeatures_;
-    bool batchedModel_;
 };
 
 

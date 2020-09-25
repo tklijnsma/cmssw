@@ -23,6 +23,7 @@ public:
     //0 associate all rechits etc
 
     void fillFeatureArrays();
+
     //1
     void fillTruthArrays();
     //2
@@ -56,7 +57,6 @@ private:
 
 
     //can be layer clusters or rechits according to mode
-    std::vector<std::vector<float> >  hitFeatures_; //this includes tracks!
     std::vector<float> recHitEnergy_;
     std::vector<float> recHitEta_;
     std::vector<float> recHitPhi_;
@@ -120,7 +120,21 @@ private:
     float windowEta_, windowPhi_;
 
     static const bool flattenRechitFeatures_ = true;
-    enum rhLables {kEnergy, kEta, kPhi, kTheta, kR, kx, ky, kz, kDetid, kTime, kId, kPad};
+    /*
+     *
+ * recHitEnergy,
+   recHitEta   ,
+   recHitID, #indicator if it is track or not
+   recHitTheta ,
+   recHitR   ,
+   recHitX     ,
+   recHitY     ,
+   recHitZ     ,
+   recHitTime
+ */
+
+
+    enum rhLables {kEnergy=0, kEta=1, kId=2, kTheta=3, kR=4, kx=5, ky=6, kz=7,  kTime=8};
     //static pointers to create branches and fill tree
     static std::vector<std::vector<float>> * sp_hitFeatures_;
     static std::vector<float> * sp_recHitEnergy_;
