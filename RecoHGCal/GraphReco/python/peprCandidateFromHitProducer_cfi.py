@@ -24,11 +24,11 @@ peprCandidateFromHitProducer = cms.EDProducer("peprCandidateFromHitProducer",
     simClusters = cms.InputTag("mix", "MergedCaloTruth"),
     # whether or not the model in the graph expects a batch dimension
     batchedModel=cms.bool(True),
-    # dimension of the padding of the second dimension, i.e., the rec hits themselves
-    padSize=cms.uint32(10000),
     # graph to the trained model
     #graphPath=cms.string("graph.pb"),
-    pipeName=cms.string("arrayspipe"),
+    tritonPath=cms.string("/afs/cern.ch/work/g/gvonsem/public/HGCAL/ML/HGCalML/triton/"),
+    inpipeName=cms.string("arrayspipe"),
+    outpipeName=cms.string("arrayspipe_pred"),
     minEta=cms.double(1.6),
     maxEta=cms.double(3.0),
     # # window size in phi and eta

@@ -24,7 +24,6 @@
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 
 #include "RecoLocalCalo/HGCalRecAlgos/interface/RecHitTools.h"
-//#include "HGCSimTruth/HGCSimTruth/interface/SimClusterTools.h"
 
 #include "RecoHGCal/GraphReco/interface/InferenceWindow.h"
 
@@ -60,6 +59,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
 
     void fillWindows(const edm::Event&);
     void writeInputArrays(const std::vector<std::vector<float> >&);
+    void readOutputArrays();
 
     // options
     std::vector<edm::InputTag> recHitCollections_;
@@ -71,12 +71,12 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
 
     //FIXME, to be replaced
     bool batchedModel_;
-    size_t padSize_;
-    std::string pipeName_;
+    std::string tritonPath_;
+    std::string inpipeName_;
+    std::string outpipeName_;
 
     // rechit tools
     hgcal::RecHitTools recHitTools_;
-    //SimClusterTools sctools_;
 
     // windows
     std::vector<InferenceWindow> windows_;
@@ -89,7 +89,6 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     size_t nPhiSegments_;
 
 
-
 };
 
 
@@ -98,8 +97,9 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
         tracksToken_(consumes<edm::View<reco::Track>>(config.getParameter<edm::InputTag>("tracks"))),
         simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))), 
         batchedModel_(config.getParameter<bool>("batchedModel")), 
-        padSize_((size_t) config.getParameter<uint32_t>("padSize")),
-        pipeName_(config.getParameter<std::string>("pipeName")), 
+        tritonPath_(config.getParameter<std::string>("tritonPath")), 
+        inpipeName_(config.getParameter<std::string>("inpipeName")),
+        outpipeName_(config.getParameter<std::string>("outpipeName")),
         //FIXME: actually these are all not needed if windows are created in the constructor!
         minEta_(config.getParameter<double>("minEta")),
         maxEta_(config.getParameter<double>("maxEta")),
@@ -120,9 +120,36 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
     produces<reco::PFCandidateCollection>();
     //produces<std::vector<Trackster>>();
 
+
+    //launch scripts to work with Triton clients
+    //https://github.com/cms-pepr/HGCalML/tree/master/triton
+    
+    std::string str0 = "cd " + tritonPath_;
+    const char *cdcommand = str0.c_str();
+    system(cdcommand);
+
+    std::string str1 = "./cmssw_oc_server.sh > serverlog.txt &";
+    const char *clientcommand1 = str1.c_str();
+    std::cout << "Executing: " << clientcommand1 << std::endl;
+    system(clientcommand1); 
+
+    std::cout << "Sleeping 30s... " << std::endl;
+    system("sleep 30");
+
+    std::string str2 = "./cmssw_oc_forward_client.sh " + inpipeName_;
+    const char *clientcommand2 = str2.c_str();
+    std::cout << "Executing: " << clientcommand2 << std::endl;
+    system(clientcommand2);
+
+    system("cd -");
+
 }
 
 peprCandidateFromHitProducer::~peprCandidateFromHitProducer() {
+
+    //FIXME: find process ID of scripts run in the constructor
+    //system("killtask <...> 15");
+    //system("killtask <...> 15");
 }
 
 
@@ -142,26 +169,16 @@ void peprCandidateFromHitProducer::endStream() {
 void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSetup& setup) {
 
     recHitTools_.getEventSetup(setup);
-    //sctools_.setRechitTools(recHitTools_);  //is it needed?
 
     auto simclusters = event.get(simClusterToken_);
     std::cout << "The size of the simclusters is " << simclusters.size() << std::endl;
 
 
-
     // fill rechits into windows
     fillWindows(event);
 
-    // // one tensor per window
-    // std::vector<tensorflow::Tensor> windowoutputs;
-    // // run the evaluation per window
-    // for (auto & window : windows_) {
-    //     window.evaluate(session_);
-    //     windowoutputs.push_back(window.getOutput());
-    // }
 
-    //FIXME, needs different format
-    //// one tensor per window
+    //FIXME: check window treatment
     //std::vector<tensorflow::Tensor> windowoutputs;
     // run the evaluation per window
     std::vector<std::vector<float> >  hitFeatures;
@@ -171,7 +188,9 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
         std::cout << "  hitFeatures size = " << hitFeatures.size() << std::endl;
         writeInputArrays(hitFeatures);
 
-        //window.evaluate();
+        //FIXME: how to check if output exists? (How long is waiting time? Rest of code on hold until output pipe available?)
+        readOutputArrays();        
+
         //windowoutputs.push_back(window.getOutput());
     }
 
@@ -181,107 +200,37 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
     //reconstructShowers();
 
 
-    // // making candidate collection
-    // auto candidates = std::make_unique<reco::PFCandidateCollection>();
-    // std::cout << "TEST " << std::endl;
-    // auto result = std::make_unique<std::vector<Trackster>>();
-    // for (unsigned int i=0; i<windowoutputs.size(); i++) {
-    //     //loop over windows
-    //     //std::cout << "Window " << i << std::endl;
+    //FIXME: block below temporarily uses simclusters as a placeholder for OC candidates
+    //FIXME: check window treatment
 
-    //     // check and print the output for ith window 
-    //     float* data = windowoutputs[i].flat<float>().data();
-    //     //std::cout << " outputs shape dimensions: " << windowoutputs[i].shape().dims() << std::endl;
-    //     //std::cout << "   outputs shape 0: " << windowoutputs[i].shape().dim_size(0) << std::endl;
-    //     //std::cout << "   outputs shape 1: " << windowoutputs[i].shape().dim_size(1) << std::endl;
-    //     //std::cout << "   outputs shape 2: " << windowoutputs[i].shape().dim_size(2) << std::endl;
-        
-    //     // FIXME: convert E, px, py, pz to XYZT maybe?
-    //     //        for now: assume the lorentzvector is in the right format already (dummy)
-    //     float X = -9999., Y=-9999., Z=-9999., E=-9999.;
-    //     // loop over particles reconstructed in the window
-    //     for (int k = 0; k < windowoutputs[i].shape().dim_size(1); k++) { 
-    //         std::cout << " particle " << k << std::endl;
-    //         //const auto abs_pdg_id = -9999;
-    //         //const auto charge = -9999;
-    //         const auto charge = 0; // FIXME!
-    //         X = *data;
-    //         //std::cout << "   four-vector X: " << X << std::endl;
-    //         data++;
-    //         Y = *data;
-    //         //std::cout << "   four-vector Y: " << Y << std::endl;
-    //         data++;
-    //         Z = *data;
-    //         //std::cout << "   four-vector Z: " << Z << std::endl;
-    //         data++;
-    //         E = *data;
-    //         //std::cout << "   four-vector T: " << T << std::endl;
-    //         //const auto& four_mom = math::XYZTLorentzVector(X,Y,Z,T);
-    //         //reco::PFCandidate::ParticleType part_type = reco::PFCandidate::X;
-    //         //candidates->emplace_back(charge, four_mom, part_type);
-
-    //         Trackster tmp;
-    //         //tmp.setRegressedEnergy(E);
-    //         //tmp.setRawEnergy(E);
-    //         //tmp.setBarycenter( math::XYZVector(X,Y,Z) );
-    //         ////set to randomly chosen values
-    //         std::cout << "    E =  " << E << ", X = " << X << ", Y = " << Y << ", Z = " << Z << std::endl;
-    //         tmp.setRegressedEnergy(222.);
-    //         tmp.setRawEnergy(222.);
-    //         tmp.setBarycenter( math::XYZVector(99,99,99) );
-    //         result->emplace_back(tmp);
-    //     }
-    // }
-
-
-//tmp commented to reduce noise
-/*
     // making candidate collection
     auto candidates = std::make_unique<reco::PFCandidateCollection>();
-    std::cout << "Making PF candidates " << std::endl;
-    ////auto result = std::make_unique<std::vector<Trackster>>();
+    std::cout << "Creating PF candidates " << std::endl;
     //for (unsigned int i=0; i<windows_.size(); i++) {
         //loop over windows
         //std::cout << "Window " << i << std::endl;
 
-        // check and print the output for ith window 
-        //float* data = windowoutputs[i].flat<float>().data();
-        ////std::cout << " outputs shape dimensions: " << windowoutputs[i].shape().dims() << std::endl;
-        ////std::cout << "   outputs shape 0: " << windowoutputs[i].shape().dim_size(0) << std::endl;
-        ////std::cout << "   outputs shape 1: " << windowoutputs[i].shape().dim_size(1) << std::endl;
-        ////std::cout << "   outputs shape 2: " << windowoutputs[i].shape().dim_size(2) << std::endl;
         
-        // FIXME: convert E, px, py, pz to XYZT maybe?
-        //        for now: assume the lorentzvector is in the right format already (dummy)
+        // FIXME: need to take care of converting E, px, py, pz <--> XYZT whenever needed
         //float X = -9999., Y=-9999., Z=-9999., E=-9999.;
+
         // loop over particles reconstructed in the window
-        //FIXME, 15 is hardcoded. 
-        //for (int k = 0; k < 15; k++) { 
-        //FIXMESimclusters size to be revisisted if working with windows
+        //FIXME: Simclusters size to be revisited if working with windows
         for(size_t it=0;it<simclusters.size();it++) {
-            //std::cout << " particle " << k << std::endl;
-            std::cout << " particle " << it << std::endl;
+
+            //std::cout << " particle " << it << std::endl;
 
             //const auto abs_pdg_id = -9999;
-            //const auto charge = -9999;
             const auto charge = 0; // FIXME!
-            
-
-            //hacking, temporarily using simcluster properties as regressed output
-
-            
-            //block inspired by calcP4 method in TracksterP4FromEnergySum plugin
+                       
+            //block inspired by calcP4 method in TICL TracksterP4FromEnergySum plugin
             //starts from 'position (X,Y,Z)'
             //math::XYZVector direction(X, Y, Z);
-
             math::XYZVectorF direction = simclusters.at(it).momentum();
             direction = direction.Unit();
-            //math::XYZTLorentzVector cartesian(direction.X(), direction.Y(), direction.Z(), E);
             math::XYZTLorentzVector cartesian(direction.X(), direction.Y(), direction.Z(), simclusters.at(it).energy());
             //// Convert px, py, pz, E vector to CMS standard pt/eta/phi/m vector
             reco::Candidate::LorentzVector p4(cartesian);
-     
-
 
             //const auto& four_mom = math::XYZTLorentzVector(X,Y,Z,E);
             const auto& four_mom = p4;
@@ -296,15 +245,15 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
 
     event.put(std::move(candidates));
 
-    std::cout << "[TEST] Results produced and put in event" << std::endl;
-*/
+    std::cout << "Results produced and put in event" << std::endl;
+
 
     // clear all windows
     for (auto& window : windows_) {
         window.clear();
     }
 
-    std::cout << "[TEST] Windows cleared" << std::endl;
+    std::cout << "Windows cleared" << std::endl;
 }
 
 
@@ -317,11 +266,6 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
     
     std::cout << "Number of windows = " << windows_.size() << std::endl;
     
-    ////FIXME
-    ////Window::mode windowmode = windows_.at(0).getMode();
-    //// skip layer cluster or rechit loop accordingly
-
-
     // copied block from window ntupler code
     // get rechits, get positions and merge collections
     std::vector<HGCRecHitWithPos> allrechits;
@@ -340,12 +284,6 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
     // fills a vector of the specified size with zeroes (entries will be 0 if rechit is not filled, and 1 if it is filled)
     std::vector<size_t> filledrechits(allrechits.size(),0);
 
-    // FIXME: make number of features configurable?
-    //size_t nfeatures = 9;
-
-    //window.
-    //std::ofstream inputArrayStream;
-
 
     for (auto & window : windows_) {
         //fill rechits in this window
@@ -355,8 +293,6 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
                filledrechits.at(it)++;
         }
 
-        // TF interface setup needs to be called before fillFeatureArrays, in order to do the zero padding
-        //window.setupTFInterface(padSize_, nfeatures, batchedModel_, inputTensorName_, outputTensorName_);
         window.fillFeatureArrays();
     }
 
@@ -366,8 +302,9 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
 
 void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vector<float> >& hitFeatures) {
 
-    //std::ofstream inputArrayStream("/dev/shm/inputArrays.txt"); //in RAM
-    std::ofstream inputArrayStream(pipeName_.c_str()); 
+    std::string inpipeRAM = "/dev/shm/" + inpipeName_; //write in RAM
+    //std::ofstream inputArrayStream(inpipeName_.c_str()); //do not write in RAM (local testing)
+    std::ofstream inputArrayStream(inpipeRAM.c_str()); 
 
     for (size_t i=0; i<hitFeatures.size(); i++) {
 
@@ -380,6 +317,28 @@ void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vecto
     inputArrayStream.close();
 }
 
+
+void peprCandidateFromHitProducer::readOutputArrays() {
+
+    //FIXME: currently just reading and printing, proper values to be stored
+    //FIXME: read until you get a last empty line, because the fifo is being filled not instantly
+
+    std::string outpipeRAM = "/dev/shm/" + outpipeName_; //read from RAM
+    //std::ifstream outputArrayStream(outpipeName_.c_str()); //do not read from RAM (local testing)
+    std::ifstream outputArrayStream(outpipeRAM.c_str()); 
+
+    std::string line;
+    if(outputArrayStream.is_open()) {
+        std::cout << "Output array file opened!" << std::endl;
+        while ( getline (outputArrayStream,line) )
+        {
+            std::cout << line << '\n';
+        }
+        outputArrayStream.close();
+    }
+
+
+}
 
 //remove
 
