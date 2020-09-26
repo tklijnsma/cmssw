@@ -22,8 +22,6 @@ peprCandidateFromHitProducer = cms.EDProducer("peprCandidateFromHitProducer",
     ),
     tracks = cms.InputTag("generalTracks"),
     simClusters = cms.InputTag("mix", "MergedCaloTruth"),
-    inputTensorName=cms.string("input"),
-    outputTensorName=cms.string("output"),
     # whether or not the model in the graph expects a batch dimension
     batchedModel=cms.bool(True),
     # dimension of the padding of the second dimension, i.e., the rec hits themselves
@@ -45,5 +43,4 @@ peprCandidateFromHitProducer = cms.EDProducer("peprCandidateFromHitProducer",
     # overlap in phi and eta
     nEtaSegments=cms.uint32(1),
     nPhiSegments=cms.uint32(1),   
-    # names of the input and output tensors
 )

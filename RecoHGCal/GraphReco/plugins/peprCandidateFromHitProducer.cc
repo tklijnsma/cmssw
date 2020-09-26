@@ -1,11 +1,13 @@
 /*
- * CMSSW plugin that performs a Window-based inference of networks using RecHits.
+ * CMSSW plugin that performs a Window-based inference of networks using RecHits and produced PF candidates.
  *
- * Authors: Marcel Rieger <marcel.rieger@cern.ch>
- *          Gerrit Van Onsem <Gerrit.Van.Onsem@cern.ch>
+ * Authors: Gerrit Van Onsem <Gerrit.Van.Onsem@cern.ch>
+ *          Marcel Rieger <marcel.rieger@cern.ch>
  */
 
 #include <memory>
+#include <iostream>
+#include <fstream>
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -68,8 +70,6 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
 
     //FIXME, to be replaced
-    std::string inputTensorName_;
-    std::string outputTensorName_;
     bool batchedModel_;
     size_t padSize_;
     std::string pipeName_;
@@ -96,9 +96,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
 peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterSet& config) :
         recHitCollections_(config.getParameter<std::vector<edm::InputTag> >("recHitCollections")), 
         tracksToken_(consumes<edm::View<reco::Track>>(config.getParameter<edm::InputTag>("tracks"))),
-        simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))),
-        inputTensorName_(config.getParameter<std::string>("inputTensorName")), 
-        outputTensorName_(config.getParameter<std::string>("outputTensorName")), 
+        simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))), 
         batchedModel_(config.getParameter<bool>("batchedModel")), 
         padSize_((size_t) config.getParameter<uint32_t>("padSize")),
         pipeName_(config.getParameter<std::string>("pipeName")), 
@@ -171,6 +169,7 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
 
         hitFeatures = window.getHitFeatures();
         std::cout << "  hitFeatures size = " << hitFeatures.size() << std::endl;
+        writeInputArrays(hitFeatures);
 
         //window.evaluate();
         //windowoutputs.push_back(window.getOutput());
@@ -342,7 +341,7 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
     std::vector<size_t> filledrechits(allrechits.size(),0);
 
     // FIXME: make number of features configurable?
-    //size_t nfeatures = 12;
+    //size_t nfeatures = 9;
 
     //window.
     //std::ofstream inputArrayStream;
@@ -358,7 +357,6 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
 
         // TF interface setup needs to be called before fillFeatureArrays, in order to do the zero padding
         //window.setupTFInterface(padSize_, nfeatures, batchedModel_, inputTensorName_, outputTensorName_);
-        //FIXME to fill the actual arrays
         window.fillFeatureArrays();
     }
 
@@ -366,11 +364,20 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
 }
 
 
-void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vector<float> >&) {
+void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vector<float> >& hitFeatures) {
 
     //std::ofstream inputArrayStream("/dev/shm/inputArrays.txt"); //in RAM
-    //std::ofstream inputArrayStream("inputArrays.txt"); 
+    std::ofstream inputArrayStream(pipeName_.c_str()); 
 
+    for (size_t i=0; i<hitFeatures.size(); i++) {
+
+        for (size_t j=0; j<hitFeatures[i].size(); j++) {
+            inputArrayStream << hitFeatures[i][j] << " ";
+        }
+        inputArrayStream << "\n";
+    }
+
+    inputArrayStream.close();
 }
 
 
