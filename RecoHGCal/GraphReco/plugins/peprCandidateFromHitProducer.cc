@@ -8,6 +8,10 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
+#include <iomanip> 
+#include <limits>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -59,7 +63,8 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
 
     void fillWindows(const edm::Event&);
     void writeInputArrays(const std::vector<std::vector<float> >&);
-    void readOutputArrays();
+    void readOutputArrays(std::vector<std::vector<float> >&);
+    pid_t start_background(std::string);
 
     // options
     std::vector<edm::InputTag> recHitCollections_;
@@ -88,6 +93,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     size_t nEtaSegments_;
     size_t nPhiSegments_;
 
+    pid_t forward_client_id_;
 
 };
 
@@ -120,36 +126,40 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
     produces<reco::PFCandidateCollection>();
     //produces<std::vector<Trackster>>();
 
+    int pid = getpid();
+    char * mypid = (char*)malloc(6);
+    sprintf(mypid, "%d", pid);
+    std::cout << "Process ID of producer: " << mypid << std::endl;
+    inpipeName_ = std::string(mypid) + "_" + inpipeName_;
+    outpipeName_ = std::string(mypid) + "_" + outpipeName_; 
+    //for local testing (e.g. when one does not know the pid in advance)
+    //inpipeName_ = "TEST_" + inpipeName_;
+    //outpipeName_ = "TEST_" + outpipeName_;
 
-    //launch scripts to work with Triton clients
+
+    //launch script(s) to work with Triton clients
     //https://github.com/cms-pepr/HGCalML/tree/master/triton
-    
-    std::string str0 = "cd " + tritonPath_;
-    const char *cdcommand = str0.c_str();
-    system(cdcommand);
+    //for now: start client manually in other terminal (but on same machine)
 
-    std::string str1 = "./cmssw_oc_server.sh > serverlog.txt &";
-    const char *clientcommand1 = str1.c_str();
-    std::cout << "Executing: " << clientcommand1 << std::endl;
-    system(clientcommand1); 
-
-    std::cout << "Sleeping 30s... " << std::endl;
-    system("sleep 30");
-
-    std::string str2 = "./cmssw_oc_forward_client.sh " + inpipeName_;
-    const char *clientcommand2 = str2.c_str();
-    std::cout << "Executing: " << clientcommand2 << std::endl;
-    system(clientcommand2);
-
-    system("cd -");
+/*
+    //attempt to start processes such that process ID can be retrieved; to be tested further
+    std::string clientcommand = tritonPath_ + "cmssw_oc_forward_client.sh " + inpipeName_;
+    std::cout << "Executing: " << clientcommand << std::endl;
+    forward_client_id_ = start_background(clientcommand);
+    std::cout << "   forward client id after start_background = " << int(forward_client_id_) << std::endl; 
+*/
 
 }
 
 peprCandidateFromHitProducer::~peprCandidateFromHitProducer() {
 
-    //FIXME: find process ID of scripts run in the constructor
-    //system("killtask <...> 15");
-    //system("killtask <...> 15");
+    //FIXME: find process ID of scripts run in the constructor; to be tested further
+/*
+    char * forwardclientid = (char*)malloc(6);
+    sprintf(forwardclientid, "%d", int(forward_client_id_));
+    std::cout << "Process ID of forward client to kill: " << forwardclientid << std::endl;
+    system(("kill -15 " + std::string(forwardclientid)).c_str());
+*/
 }
 
 
@@ -170,80 +180,114 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
 
     recHitTools_.getEventSetup(setup);
 
-    auto simclusters = event.get(simClusterToken_);
-    std::cout << "The size of the simclusters is " << simclusters.size() << std::endl;
-
+    //auto simclusters = event.get(simClusterToken_);
+    //std::cout << "The size of the simclusters is " << simclusters.size() << std::endl;
 
     // fill rechits into windows
     fillWindows(event);
 
-
-    //FIXME: check window treatment
-    //std::vector<tensorflow::Tensor> windowoutputs;
+    //vector (from multiple windows) of vector of ~ OC candidates
+    std::vector< std::vector<std::vector<float> > > windowoutputs; 
+    
     // run the evaluation per window
     std::vector<std::vector<float> >  hitFeatures;
     for (auto & window : windows_) {
+        std::cout << "New window " << std::endl;
 
         hitFeatures = window.getHitFeatures();
-        std::cout << "  hitFeatures size = " << hitFeatures.size() << std::endl;
+        std::cout << "   hitFeatures size = " << hitFeatures.size() << std::endl;
+        //std::cout << "      number of features per hit = " << hitFeatures[0].size() << std::endl;
+
         writeInputArrays(hitFeatures);
+ 
+        //inner vector is regressed energy, 2D position, and time (total 4 elements)
+        std::vector<std::vector<float> >  candidates;
+        readOutputArrays(candidates);     
 
-        //FIXME: how to check if output exists? (How long is waiting time? Rest of code on hold until output pipe available?)
-        readOutputArrays();        
+        windowoutputs.push_back( candidates );
 
-        //windowoutputs.push_back(window.getOutput());
+        //break; //if quickly testing just one window
     }
 
 
-
-    // reconstruct showers using all windows and put them into the event
-    //reconstructShowers();
-
-
-    //FIXME: block below temporarily uses simclusters as a placeholder for OC candidates
-    //FIXME: check window treatment
-
     // making candidate collection
-    auto candidates = std::make_unique<reco::PFCandidateCollection>();
+    auto pfcandidates = std::make_unique<reco::PFCandidateCollection>();
     std::cout << "Creating PF candidates " << std::endl;
-    //for (unsigned int i=0; i<windows_.size(); i++) {
+
+    for (size_t i=0; i<windowoutputs.size(); i++) {
+
         //loop over windows
-        //std::cout << "Window " << i << std::endl;
+        std::cout << " Window " << i << std::endl;
 
-        
-        // FIXME: need to take care of converting E, px, py, pz <--> XYZT whenever needed
-        //float X = -9999., Y=-9999., Z=-9999., E=-9999.;
+        //FIXME: ugly quick hardcoded way to set Z coordinate of the candidate
+        //exploiting that first window is positive eta, second window is negative eta (with current config...)
+        float Z = -9999.;
+        if (i == 0) Z = 320.;  //in cm
+        else if (i == 1) Z = -320.;   //in cm
 
-        // loop over particles reconstructed in the window
-        //FIXME: Simclusters size to be revisited if working with windows
-        for(size_t it=0;it<simclusters.size();it++) {
 
-            //std::cout << " particle " << it << std::endl;
+        float X = -9999., Y=-9999., E=-9999.;
+
+        // loop over particles reconstructed in the current window
+        for(size_t j=0;j<windowoutputs[i].size();j++) {
+
+            //std::cout << " particle " << j << std::endl;
 
             //const auto abs_pdg_id = -9999;
-            const auto charge = 0; // FIXME!
-                       
+            const auto charge = 0; // FIXME
+                     
+            //inner index as filled in readOutputArrays
+            E = windowoutputs[i][j][0];
+            X = windowoutputs[i][j][1];
+            Y = windowoutputs[i][j][2];
+
             //block inspired by calcP4 method in TICL TracksterP4FromEnergySum plugin
             //starts from 'position (X,Y,Z)'
-            //math::XYZVector direction(X, Y, Z);
-            math::XYZVectorF direction = simclusters.at(it).momentum();
+            math::XYZVector direction(X, Y, Z);
             direction = direction.Unit();
-            math::XYZTLorentzVector cartesian(direction.X(), direction.Y(), direction.Z(), simclusters.at(it).energy());
+            math::XYZTLorentzVector cartesian(direction.X(), direction.Y(), direction.Z(), E);
             //// Convert px, py, pz, E vector to CMS standard pt/eta/phi/m vector
             reco::Candidate::LorentzVector p4(cartesian);
 
             //const auto& four_mom = math::XYZTLorentzVector(X,Y,Z,E);
             const auto& four_mom = p4;
-            std::cout << "    PF particle energy " << four_mom.E() << ", Px = " << four_mom.Px() << ", Py = " << four_mom.Py() << ", Pz = " << four_mom.Pz() << std::endl;
+            //std::cout << "    PF particle energy " << four_mom.E() << ", Px = " << four_mom.Px() << ", Py = " << four_mom.Py() << ", Pz = " << four_mom.Pz() << std::endl;
             reco::PFCandidate::ParticleType part_type = reco::PFCandidate::X;
-            candidates->emplace_back(charge, four_mom, part_type);
+            pfcandidates->emplace_back(charge, four_mom, part_type);
 
         }
-    //}
+
+
+        // //this was a placeholder block to create PF particles from simclusters; just needed for technical tests
+        // for(size_t it=0;it<simclusters.size();it++) {
+
+        //     //std::cout << " particle " << it << std::endl;
+
+        //     //const auto abs_pdg_id = -9999;
+        //     const auto charge = 0; // FIXME!
+                       
+        //     //block inspired by calcP4 method in TICL TracksterP4FromEnergySum plugin
+        //     //starts from 'position (X,Y,Z)'
+        //     //math::XYZVector direction(X, Y, Z);
+        //     math::XYZVectorF direction = simclusters.at(it).momentum();
+        //     direction = direction.Unit();
+        //     math::XYZTLorentzVector cartesian(direction.X(), direction.Y(), direction.Z(), simclusters.at(it).energy());
+        //     //// Convert px, py, pz, E vector to CMS standard pt/eta/phi/m vector
+        //     reco::Candidate::LorentzVector p4(cartesian);
+
+        //     //const auto& four_mom = math::XYZTLorentzVector(X,Y,Z,E);
+        //     const auto& four_mom = p4;
+        //     //std::cout << "    PF particle energy " << four_mom.E() << ", Px = " << four_mom.Px() << ", Py = " << four_mom.Py() << ", Pz = " << four_mom.Pz() << std::endl;
+        //     reco::PFCandidate::ParticleType part_type = reco::PFCandidate::X;
+        //     pfcandidates->emplace_back(charge, four_mom, part_type);
+
+        // }
+
+    }
 
 
 
-    event.put(std::move(candidates));
+    event.put(std::move(pfcandidates));
 
     std::cout << "Results produced and put in event" << std::endl;
 
@@ -303,9 +347,15 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
 void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vector<float> >& hitFeatures) {
 
     std::string inpipeRAM = "/dev/shm/" + inpipeName_; //write in RAM
-    //std::ofstream inputArrayStream(inpipeName_.c_str()); //do not write in RAM (local testing)
-    std::ofstream inputArrayStream(inpipeRAM.c_str()); 
+    //std::string inpipeRAM = inpipeName_; //do not write in RAM (local testing)
+    ////std::ofstream inputArrayStream(inpipeRAM.c_str()); 
+    std::ofstream inputArrayStream;
+    inputArrayStream.open(inpipeRAM.c_str(), std::ofstream::out | std::ofstream::app);
+    inputArrayStream.flush();
+    std::cout << "     inpipeRAM = " << inpipeRAM << std::endl;
 
+    //FIXME: write with highest precision
+    inputArrayStream << std::scientific;
     for (size_t i=0; i<hitFeatures.size(); i++) {
 
         for (size_t j=0; j<hitFeatures[i].size(); j++) {
@@ -318,28 +368,79 @@ void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vecto
 }
 
 
-void peprCandidateFromHitProducer::readOutputArrays() {
-
-    //FIXME: currently just reading and printing, proper values to be stored
-    //FIXME: read until you get a last empty line, because the fifo is being filled not instantly
+void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<float> >& candidates) {
 
     std::string outpipeRAM = "/dev/shm/" + outpipeName_; //read from RAM
-    //std::ifstream outputArrayStream(outpipeName_.c_str()); //do not read from RAM (local testing)
-    std::ifstream outputArrayStream(outpipeRAM.c_str()); 
+    //std::string outpipeRAM = outpipeName_; //do not read from RAM (local testing)
+    ////std::ifstream outputArrayStream(outpipeRAM.c_str()); 
+    std::ifstream outputArrayStream;
+    outputArrayStream.open(outpipeRAM.c_str(), std::ofstream::out | std::ofstream::app);
+    std::cout << "     outpipeRAM = " << outpipeRAM << std::endl;
 
     std::string line;
     if(outputArrayStream.is_open()) {
         std::cout << "Output array file opened!" << std::endl;
-        while ( getline (outputArrayStream,line) )
+        while ( true )   
         {
+            //std::cout << " ... reading new line ... "<< std::endl;
+            getline (outputArrayStream,line);
             std::cout << line << '\n';
+
+            if(line.empty()){
+                break;
+            }
+
+            // //split line according to spaces
+            std::istringstream iss(line);
+            std::vector<std::string> values(std::istream_iterator<std::string>{iss},
+                                 std::istream_iterator<std::string>());
+
+            std::string energy_str = "-9999.", X_str = "-9999.", Y_str = "-9999.", T_str = "-9999.";
+            if(values.size() == 16 || values.size() == 17) {
+                energy_str = values[10];
+                X_str = values[11];
+                Y_str = values[12];
+                T_str = values[13]; 
+                    
+                //std::cout << "    Storing values from the model output" << std::endl;
+                std::vector<float> candidate = {std::stof(energy_str), std::stof(X_str), std::stof(Y_str), std::stof(T_str) };
+                candidates.push_back( candidate );
+            }
+            else {
+                if (values.size() == 2) {
+                    //this is the line with shapes; ignore for now
+                }
+                else {
+                    std::cout << "    Please check model output to retrieve desired regressed properties" << std::endl;
+                }
+            }
+
         }
+        std::cout << "Closing output array stream" << std::endl;
         outputArrayStream.close();
     }
 
 
 }
 
-//remove
+pid_t peprCandidateFromHitProducer::start_background(std::string osstr)
+{
+    //int rv;
+    pid_t child_pid = fork();
+    std::cout << " Child pid = " << int(child_pid) << std::endl;
+
+    if(child_pid) //this is the parent process
+    {
+        std::cout << "   This is the parent process" << std::endl;
+        return child_pid;
+    }
+    else //this is the child process
+    {
+        std::cout << "   This is the child process" << std::endl;
+        system(osstr.data()); //make this blocking (no "&" at the end), so that the child process runs until killed
+    }
+
+    return(child_pid);
+}
 
 DEFINE_FWK_MODULE(peprCandidateFromHitProducer);
