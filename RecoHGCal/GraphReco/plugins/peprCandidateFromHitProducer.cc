@@ -12,6 +12,7 @@
 #include <limits>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -130,36 +131,34 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
     char * mypid = (char*)malloc(6);
     sprintf(mypid, "%d", pid);
     std::cout << "Process ID of producer: " << mypid << std::endl;
-    //inpipeName_ = std::string(mypid) + "_" + inpipeName_;
-    //outpipeName_ = std::string(mypid) + "_" + outpipeName_; 
+    inpipeName_ = std::string(mypid) + "_" + inpipeName_;
+    outpipeName_ = std::string(mypid) + "_" + outpipeName_; 
     //for local testing (e.g. when one does not know the pid in advance)
-    inpipeName_ = "TEST_" + inpipeName_;
-    outpipeName_ = "TEST_" + outpipeName_;
+    //inpipeName_ = "TEST_" + inpipeName_;
+    //outpipeName_ = "TEST_" + outpipeName_;
 
 
     //launch script(s) to work with Triton clients
     //https://github.com/cms-pepr/HGCalML/tree/master/triton
-    //for now: start client manually in other terminal (but on same machine)
 
-/*
-    //attempt to start processes such that process ID can be retrieved; to be tested further
+    //start process in background such that process ID can be retrieved
     std::string clientcommand = tritonPath_ + "cmssw_oc_forward_client.sh " + inpipeName_;
-    std::cout << "Executing: " << clientcommand << std::endl;
     forward_client_id_ = start_background(clientcommand);
-    std::cout << "   forward client id after start_background = " << int(forward_client_id_) << std::endl; 
-*/
+    //std::cout << "   forward client id after start_background = " << int(forward_client_id_) << std::endl; 
 
 }
 
 peprCandidateFromHitProducer::~peprCandidateFromHitProducer() {
 
-    //FIXME: find process ID of scripts run in the constructor; to be tested further
 /*
+    //FIXME: find process ID of scripts run in the constructor; to be tested further
+    //the block below makes the child process crash in an ugly way, and the client is still running
     char * forwardclientid = (char*)malloc(6);
     sprintf(forwardclientid, "%d", int(forward_client_id_));
     std::cout << "Process ID of forward client to kill: " << forwardclientid << std::endl;
     system(("kill -15 " + std::string(forwardclientid)).c_str());
 */
+
 }
 
 
@@ -351,6 +350,19 @@ void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vecto
     std::string inpipeRAM = "/dev/shm/" + inpipeName_; //write in RAM
     //std::string inpipeRAM = inpipeName_; //do not write in RAM (local testing)
     ////std::ofstream inputArrayStream(inpipeRAM.c_str()); 
+
+    //wait until pipe is open
+    std::cout << "Checking if pipe is open..." << std::endl;
+    bool pipe_open = false;
+    while(!pipe_open) {
+        struct stat buf;
+        if (stat(inpipeRAM.c_str(), &buf) != -1)
+        {
+            std::cout << "   Pipe open --> proceed" << std::endl;
+            pipe_open = true;
+        }
+    }
+
     std::ofstream inputArrayStream;
     inputArrayStream.open(inpipeRAM.c_str(), std::ofstream::out | std::ofstream::app);
     inputArrayStream.flush();
@@ -454,12 +466,14 @@ pid_t peprCandidateFromHitProducer::start_background(std::string osstr)
 
     if(child_pid) //this is the parent process
     {
-        std::cout << "   This is the parent process" << std::endl;
+        //std::cout << "   This is the parent process" << std::endl;
         return child_pid;
     }
     else //this is the child process
     {
-        std::cout << "   This is the child process" << std::endl;
+        //std::cout << "   This is the child process" << std::endl;
+        //std::cout << "   Will execute in background: " << osstr.data() << std::endl;
+
         system(osstr.data()); //make this blocking (no "&" at the end), so that the child process runs until killed
     }
 
