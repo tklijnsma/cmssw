@@ -233,9 +233,10 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
             E = windowoutputs[i][j][0];
             X = windowoutputs[i][j][1];
             Y = windowoutputs[i][j][2];
-            Z = windowoutputs[i][j][2];
+            Z = windowoutputs[i][j][3];
 
             //block inspired by calcP4 method in TICL TracksterP4FromEnergySum plugin
+            //below assuming (0,0,0) as vertex
             //starts from 'position (X,Y,Z)'
             math::XYZVector direction(X, Y, Z);
             direction = direction.Unit();
@@ -244,7 +245,13 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
             //// Convert px, py, pz, E vector to CMS standard pt/eta/phi/m vector
             reco::Candidate::LorentzVector p4(cartesian);
 
-            //const auto& four_mom = math::XYZTLorentzVector(X,Y,Z,E);
+            // //Alternative calculation as check
+            // float R = std::sqrt(X*X + Y*Y + Z*Z);
+            // float px = E * X / R;
+            // float py = E * Y / R;
+            // float pz = E * Z / R;
+            // std::cout << "  (px,py,pz) = " << "(" << px << "," << py << "," << pz << ")" << std::endl;
+
             const auto& four_mom = p4;
             //std::cout << "    PF particle energy " << four_mom.E() << ", Px = " << four_mom.Px() << ", Py = " << four_mom.Py() << ", Pz = " << four_mom.Pz() << std::endl;
             reco::PFCandidate::ParticleType part_type = reco::PFCandidate::X;
