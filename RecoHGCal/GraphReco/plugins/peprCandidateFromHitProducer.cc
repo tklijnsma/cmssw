@@ -202,14 +202,7 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
  
         //inner vector is regressed energy, 2D position, and time (total 4 elements)
         std::vector<std::vector<float> >  candidates;
-        readOutputArrays(candidates);
-
-        for (unsigned int i=0; i<candidates.size(); i++) {
-            std::cout << "     Candidate " << i << std::endl;
-            for (unsigned int j=0; j<candidates[i].size(); j++) {
-                std::cout << "       candidate properties: " << candidates[i][j] << std::endl;
-            }
-        }  
+        readOutputArrays(candidates); 
 
         windowoutputs.push_back( candidates );
 
@@ -385,9 +378,9 @@ void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<floa
         std::cout << "Output array file opened!" << std::endl;
         while ( true )   
         {
-            std::cout << " ... reading new line ... "<< std::endl;
+            //std::cout << " ... reading new line ... "<< std::endl;
             getline (outputArrayStream,line);
-            std::cout << " ... read new line ... "<< std::endl;
+            //std::cout << " ... read new line ... "<< std::endl;
             std::cout << line << '\n';
 
             if(line.empty()){
@@ -413,25 +406,25 @@ void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<floa
                 //values are relative to input rechit position
                 Xrel_str = values[11];
                 Yrel_str = values[12];
-                //FIXME: is T also relative to T of rechit?
+                //FIXME: is T also relative to T of rechit? Not used for now
                 //T_str = values[13]; 
 
                 E = std::stof(energy_str);
                 X = std::stof(X_str) + std::stof(Xrel_str);
                 Y = std::stof(Y_str) + std::stof(Yrel_str);
 
-                //positive Z of rechit means Z = 320 cm (at HGCAL surface)
+                //positive Z of rechit means Z = 320 cm (as regressed X,Y is measured on HGCAL surface)
                 if ( std::stof(Z_str) > 0 ) Z = 320.;  //in cm
                 else Z = -320.;   //in cm
 
                     
-                std::cout << "    Storing values from the model output" << std::endl;
+                //std::cout << "    Storing values from the model output" << std::endl;
                 std::vector<float> candidate = {E, X, Y, Z };
                 candidates.push_back( candidate );
             }
             else {
                 if (values.size() == 2) {
-                    std::cout << "    this is the line with shapes; ignore for now" << std::endl;
+                    //std::cout << "    this is the line with shapes; ignore for now" << std::endl;
                 }
                 else {
                     std::cout << "    Please check model output to retrieve desired regressed properties" << std::endl;
