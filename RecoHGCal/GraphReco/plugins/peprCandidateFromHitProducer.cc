@@ -80,6 +80,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     std::string tritonPath_;
     std::string inpipeName_;
     std::string outpipeName_;
+    std::string containerPIDName_;
 
     // rechit tools
     hgcal::RecHitTools recHitTools_;
@@ -116,8 +117,6 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
         nPhiSegments_((size_t)config.getParameter<uint32_t>("nPhiSegments"))
         {
 
-    // sanity checks for sliding windows
-
     // get tokens
     for (edm::InputTag& recHitCollection : recHitCollections_) {
         recHitTokens_.push_back(consumes<HGCRecHitCollection>(recHitCollection));
@@ -130,9 +129,10 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
     int pid = getpid();
     char * mypid = (char*)malloc(6);
     sprintf(mypid, "%d", pid);
-    std::cout << "Process ID of producer: " << mypid << std::endl;
+    //std::cout << "Process ID of producer: " << mypid << std::endl;
     inpipeName_ = std::string(mypid) + "_" + inpipeName_;
-    outpipeName_ = std::string(mypid) + "_" + outpipeName_; 
+    outpipeName_ = std::string(mypid) + "_" + outpipeName_;
+    containerPIDName_ = "containerpid";
     //for local testing (e.g. when one does not know the pid in advance)
     //inpipeName_ = "TEST_" + inpipeName_;
     //outpipeName_ = "TEST_" + outpipeName_;
@@ -140,25 +140,23 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
 
     //launch script(s) to work with Triton clients
     //https://github.com/cms-pepr/HGCalML/tree/master/triton
-
-    //start process in background such that process ID can be retrieved
-    std::string clientcommand = tritonPath_ + "cmssw_oc_forward_client.sh " + inpipeName_;
-    forward_client_id_ = start_background(clientcommand);
-    //std::cout << "   forward client id after start_background = " << int(forward_client_id_) << std::endl; 
+    
+    //within the client script, the container is also started in the background and its process ID is stored for later kill command in destructor
+    std::string clientcommand = tritonPath_ + "cmssw_oc_forward_client.sh " + inpipeName_ + " " + containerPIDName_ + " &";
+    system(clientcommand.data());
+    std::cout << "  Forward client command executed" << std::endl;
 
 }
 
 peprCandidateFromHitProducer::~peprCandidateFromHitProducer() {
 
-/*
-    //FIXME: find process ID of scripts run in the constructor; to be tested further
-    //the block below makes the child process crash in an ugly way, and the client is still running
-    char * forwardclientid = (char*)malloc(6);
-    sprintf(forwardclientid, "%d", int(forward_client_id_));
-    std::cout << "Process ID of forward client to kill: " << forwardclientid << std::endl;
-    system(("kill -15 " + std::string(forwardclientid)).c_str());
-*/
-
+    std::string containerpid_location="/dev/shm/" + containerPIDName_;
+    int containerpid;
+    std::ifstream containerpidfile;
+    containerpidfile.open(containerpid_location);
+    containerpidfile >> containerpid;
+    std::cout << "Process ID of triton container to kill: " << containerpid << std::endl;
+    system(("kill -9 " + std::to_string(containerpid)).data());
 }
 
 
@@ -458,26 +456,5 @@ void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<floa
 
 }
 
-pid_t peprCandidateFromHitProducer::start_background(std::string osstr)
-{
-    //int rv;
-    pid_t child_pid = fork();
-    std::cout << " Child pid = " << int(child_pid) << std::endl;
-
-    if(child_pid) //this is the parent process
-    {
-        //std::cout << "   This is the parent process" << std::endl;
-        return child_pid;
-    }
-    else //this is the child process
-    {
-        //std::cout << "   This is the child process" << std::endl;
-        //std::cout << "   Will execute in background: " << osstr.data() << std::endl;
-
-        system(osstr.data()); //make this blocking (no "&" at the end), so that the child process runs until killed
-    }
-
-    return(child_pid);
-}
 
 DEFINE_FWK_MODULE(peprCandidateFromHitProducer);
