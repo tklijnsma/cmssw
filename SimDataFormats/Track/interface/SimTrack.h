@@ -4,6 +4,7 @@
 #include "SimDataFormats/Track/interface/CoreSimTrack.h"
 #include "DataFormats/Math/interface/Vector3D.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
+#include "SimG4Core/Notification/interface/G4SimTrack.h"
 #include "FWCore/Utilities/interface/Exception.h"
 
 class SimTrack : public CoreSimTrack {
@@ -48,11 +49,20 @@ public:
   inline void setVertexIndex(const int v) { ivert = v; }
 
   // Boundary crossing variables
-  void setCrossedBoundaryPosMom(int id, const math::XYZVectorD position, const math::XYZTLorentzVectorD momentum){
-    crossedBoundary_ = true;
-    idAtBoundary_ = id;
-    positionAtBoundary_ = position;
-    momentumAtBoundary_ = momentum;
+  // void setCrossedBoundaryPosMom(int id, const math::XYZVectorD position, const math::XYZTLorentzVectorD momentum){
+  //   crossedBoundary_ = true;
+  //   idAtBoundary_ = id;
+  //   positionAtBoundary_ = position;
+  //   momentumAtBoundary_ = momentum;
+  //   }
+  void copyCrossedBoundaryVars(const G4SimTrack* track){
+    if (track->crossedBoundary()){
+      crossedBoundary_ = track->crossedBoundary();
+      idAtBoundary_ = track->getIDAtBoundary();
+      positionAtBoundary_ = track->getPositionAtBoundary();
+      momentumAtBoundary_ = track->getMomentumAtBoundary();
+      correctedMomentumAtBoundary_ = track->getCorrectedMomentumAtBoundary();
+      }
     }
   bool crossedBoundary() const { return crossedBoundary_; }
   math::XYZVectorD getPositionAtBoundary() const {
@@ -63,19 +73,23 @@ public:
     assertCrossedBoundary();
     return momentumAtBoundary_;
     }
+  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+    assertCrossedBoundary();
+    return correctedMomentumAtBoundary_;
+    }
   int getIDAtBoundary() const {
     assertCrossedBoundary();
     return idAtBoundary_;
     }
-  // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
-  bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
-  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
-    return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
-    }
-  void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
-    hasCorrectedMomentumAtBoundary_ = true;
-    correctedMomentumAtBoundary_ = corrMom;
-    }
+  // // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
+  // bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
+  // math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+  //   return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
+  //   }
+  // void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
+  //   hasCorrectedMomentumAtBoundary_ = true;
+  //   correctedMomentumAtBoundary_ = corrMom;
+  //   }
 
 private:
   int ivert;
@@ -88,7 +102,7 @@ private:
   int idAtBoundary_;
   math::XYZVectorD positionAtBoundary_;
   math::XYZTLorentzVectorD momentumAtBoundary_;
-  bool hasCorrectedMomentumAtBoundary_;
+  // bool hasCorrectedMomentumAtBoundary_;
   math::XYZTLorentzVectorD correctedMomentumAtBoundary_;
   
   void assertCrossedBoundary() const {

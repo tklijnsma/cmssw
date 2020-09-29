@@ -29,8 +29,8 @@ TrackWithHistory::TrackWithHistory(const G4Track* g4trk)
       storeTrack_(false),
       saved_(false),
       flagCaloSplittingCriterion_(false),
-      isPrimary_(false),
-      hasCorrectedMomentumAtBoundary_(false)
+      isPrimary_(false)
+      // , hasCorrectedMomentumAtBoundary_(false)
       // hasParentMomentumAtCreation_(false)
       {
   if (g4trk != nullptr) {
@@ -53,6 +53,7 @@ TrackWithHistory::TrackWithHistory(const G4Track* g4trk)
     // V.I. weight is computed in the same way as before
     // without usage of G4Track::GetWeight()
     weight_ = 10000 * genParticleID_;
+    isCorrectedByTheseTrackIDs_ = std::set<unsigned int>();
     if (trkInfo.hasParentMomentumAtCreation()) setParentMomentumAtCreation(trkInfo.parentMomentumAtCreation()) ;
 #ifdef DEBUG
     LogDebug("TrackInformation") << " TrackWithHistory : created history for " << trackID_ << " with mother "

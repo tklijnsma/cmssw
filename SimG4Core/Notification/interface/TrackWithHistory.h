@@ -8,6 +8,7 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "G4Allocator.hh"
+#include <set>
 
 class G4VProcess;
 class G4TrackToParticleID;
@@ -55,6 +56,7 @@ public:
     idAtBoundary_ = id;
     positionAtBoundary_ = position;
     momentumAtBoundary_ = momentum;
+    correctedMomentumAtBoundary_ = momentum;
     }
   bool crossedBoundary() const { return crossedBoundary_; }
   math::XYZVectorD getPositionAtBoundary() const {
@@ -65,33 +67,87 @@ public:
     assertCrossedBoundary();
     return momentumAtBoundary_;
     }
+  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+    assertCrossedBoundary();
+    return correctedMomentumAtBoundary_;
+    }
   int getIDAtBoundary() const {
     assertCrossedBoundary();
     return idAtBoundary_;
     }
-  // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
-  bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
-  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
-    return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
-    }
-  void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
-    // Don't overwrite if new 4-mom has a higher energy
-    if (hasCorrectedMomentumAtBoundary_ && corrMom.E() > correctedMomentumAtBoundary_.E()){
-#ifdef EDM_ML_DEBUG
-      edm::LogVerbatim("DoFineCalo") << "Not overwriting correctedMomentumAtBoundary for track " << trackID_;
-#endif
-      return;
+  void applyCorrectionToMomentumAtBoundary(unsigned int secondaryTrackID, math::XYZTLorentzVectorD secondaryMomentum){
+    assertCrossedBoundary();
+
+    if (isCorrectedByTheseTrackIDs_.count(secondaryTrackID) > 0){
+      edm::LogVerbatim("DoFineCalo")
+        << "Track " << trackID_ << "is already corrected for secondary " << secondaryTrackID;
       }
-    hasCorrectedMomentumAtBoundary_ = true;
-    correctedMomentumAtBoundary_ = corrMom;
-    edm::LogVerbatim("DoFineCalo")
-      << "Setting track " << trackID_ << " correctedMomentumAtBoundary[GeV]=("
-      << corrMom.Px() << ","
-      << corrMom.Py() << ","
-      << corrMom.Pz() << ","
-      << corrMom.E() << ")"
-      ;
+    else {
+      math::XYZTLorentzVectorD correctedMomentumAtBoundaryBefore = correctedMomentumAtBoundary_; // Save copy for logging purposes only
+      correctedMomentumAtBoundary_ -= secondaryMomentum;
+      edm::LogVerbatim("DoFineCalo")
+        << "Correcting " << trackID_
+        << ": ("
+        << correctedMomentumAtBoundaryBefore.x() << ","
+        << correctedMomentumAtBoundaryBefore.y() << ","
+        << correctedMomentumAtBoundaryBefore.z() << ","
+        << correctedMomentumAtBoundaryBefore.e() << ")"
+        << "- ("
+        << secondaryMomentum.x() << ","
+        << secondaryMomentum.y() << ","
+        << secondaryMomentum.z() << ","
+        << secondaryMomentum.e() << ")"
+        << " = ("
+        << correctedMomentumAtBoundary_.x() << ","
+        << correctedMomentumAtBoundary_.y() << ","
+        << correctedMomentumAtBoundary_.z() << ","
+        << correctedMomentumAtBoundary_.e() << ")"
+        ;
+      isCorrectedByTheseTrackIDs_.insert(secondaryTrackID);
+      }
     }
+    void applyCorrectionToMomentumAtBoundary(const G4Track* secondaryTrack){
+      math::XYZTLorentzVectorD secondaryMomentum(
+        secondaryTrack->GetMomentum().x() / CLHEP::GeV,
+        secondaryTrack->GetMomentum().y() / CLHEP::GeV,
+        secondaryTrack->GetMomentum().z() / CLHEP::GeV,
+        secondaryTrack->GetKineticEnergy() / CLHEP::GeV
+        );
+      applyCorrectionToMomentumAtBoundary(secondaryTrack->GetTrackID(), secondaryMomentum);
+      }
+    void applyCorrectionToMomentumAtBoundary(const TrackWithHistory* secondaryTrack){
+      math::XYZTLorentzVectorD secondaryMomentum(
+        secondaryTrack->momentum().x() / CLHEP::GeV,
+        secondaryTrack->momentum().y() / CLHEP::GeV,
+        secondaryTrack->momentum().z() / CLHEP::GeV,
+        secondaryTrack->totalEnergy() / CLHEP::GeV
+        );
+      applyCorrectionToMomentumAtBoundary(secondaryTrack->trackID(), secondaryMomentum);
+      }
+
+//   // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
+//   bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
+//   math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+//     return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
+//     }
+//   void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
+//     // Don't overwrite if new 4-mom has a higher energy
+//     if (hasCorrectedMomentumAtBoundary_ && corrMom.E() > correctedMomentumAtBoundary_.E()){
+// #ifdef EDM_ML_DEBUG
+//       edm::LogVerbatim("DoFineCalo") << "Not overwriting correctedMomentumAtBoundary for track " << trackID_;
+// #endif
+//       return;
+//       }
+//     hasCorrectedMomentumAtBoundary_ = true;
+//     correctedMomentumAtBoundary_ = corrMom;
+//     edm::LogVerbatim("DoFineCalo")
+//       << "Setting track " << trackID_ << " correctedMomentumAtBoundary[GeV]=("
+//       << corrMom.Px() << ","
+//       << corrMom.Py() << ","
+//       << corrMom.Pz() << ","
+//       << corrMom.E() << ")"
+//       ;
+//     }
 
   void setParentMomentumAtCreation(math::XYZTLorentzVectorD fparentMomentum) {
     hasParentMomentumAtCreation_ = true;
@@ -136,10 +192,11 @@ private:
   int idAtBoundary_;
   math::XYZVectorD positionAtBoundary_;
   math::XYZTLorentzVectorD momentumAtBoundary_;
-  bool hasCorrectedMomentumAtBoundary_;
+  // bool hasCorrectedMomentumAtBoundary_;
   math::XYZTLorentzVectorD correctedMomentumAtBoundary_;
   bool hasParentMomentumAtCreation_;
   math::XYZTLorentzVectorD parentMomentumAtCreation_;
+  std::set<unsigned int> isCorrectedByTheseTrackIDs_;
 
   int extractGenID(const G4Track *gt) const;
 

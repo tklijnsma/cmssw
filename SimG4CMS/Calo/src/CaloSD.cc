@@ -413,7 +413,8 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
       // If saving because of the splitting criterion, be sure to update the parent 4-momentum
       if (trkInfo->passesCaloSplittingCriterion()){
         TrackWithHistory * parentTrack = m_trackManager->getTrackByID(theTrack->GetParentID());
-        parentTrack->setCorrectedMomentumAtBoundary(trkInfo->parentMomentumAtCreation());
+        // parentTrack->setCorrectedMomentumAtBoundary(trkInfo->parentMomentumAtCreation());
+        parentTrack->applyCorrectionToMomentumAtBoundary(theTrack);
         }
       }
     // theTrack itself does not pass thresholds / does not cross boundary; go through its history to find a track that does
@@ -493,7 +494,8 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
 #endif
           // Be sure to update the parent 4-momentum to avoid energy double counting
           TrackWithHistory * parentTrack = m_trackManager->getTrackByID(recordTrackWithHistory->parentID());
-          parentTrack->setCorrectedMomentumAtBoundary(recordTrackWithHistory->parentMomentumAtCreation());
+          // parentTrack->setCorrectedMomentumAtBoundary(recordTrackWithHistory->parentMomentumAtCreation());
+          parentTrack->applyCorrectionToMomentumAtBoundary(recordTrackWithHistory);
           break;
           }
         else{
