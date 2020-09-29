@@ -20,7 +20,7 @@
 
 #include "G4SystemOfUnits.hh"
 
-//#define EDM_ML_DEBUG
+// #define EDM_ML_DEBUG
 
 CaloTrkProcessing::CaloTrkProcessing(const std::string& name,
                                      const edm::EventSetup& es,
@@ -34,6 +34,7 @@ CaloTrkProcessing::CaloTrkProcessing(const std::string& name,
   eMin_ = m_p.getParameter<double>("EminTrack") * CLHEP::MeV;
   putHistory_ = m_p.getParameter<bool>("PutHistory");
   doFineCalo_ = m_p.getParameter<bool>("DoFineCalo");
+  storeAllTracksCalo_ = m_p.getParameter<bool>("StoreAllTracksCalo");
   eMinFine_ = m_p.getParameter<double>("EminFineTrack") * CLHEP::MeV;
   eMinFinePhoton_ = m_p.getParameter<double>("EminFinePhoton") * CLHEP::MeV;
 
@@ -185,6 +186,78 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
     edm::LogError("CaloSim") << "CaloTrkProcessing: No trk info !!!! abort ";
     throw cms::Exception("Unknown", "CaloTrkProcessing") << "cannot get trkInfo for Track " << id << "\n";
   }
+
+  if (doFineCalo_){
+    // Store current momentum whenever a secondary is created in the trkInfo
+    const std::vector<const G4Track*>* secondaries = aStep->GetSecondaryInCurrentStep();
+    for(unsigned int i=0; i < secondaries->size(); i++){
+      const G4Track* secondary = secondaries->operator[](i);
+      trkInfo->insertMomentumAtCreationSecondary(secondary, theTrack);
+      }
+    }
+
+  if (doFineCalo_ || storeAllTracksCalo_) {
+    // Boundary-crossing logic
+    // const G4VTouchable* touch = aStep->GetPreStepPoint()->GetTouchable();
+    int prestepLV = isItCalo(aStep->GetPreStepPoint()->GetTouchable(), fineDetectors_);
+    int poststepLV = isItCalo(aStep->GetPostStepPoint()->GetTouchable(), fineDetectors_);
+    if (
+      prestepLV < 0 && poststepLV >= 0
+      // Require abs(pre z position) < abs(current z position) to prevent back scattering tracks from being counted
+      && std::abs(theTrack->GetStep()->GetPreStepPoint()->GetPosition().z()) < std::abs(theTrack->GetPosition().z())
+      ) {
+      edm::LogVerbatim("DoFineCalo")
+        << "Crossed boundary:"
+        << " Track " << id
+        << " pdgid=" << theTrack->GetDefinition()->GetPDGEncoding()
+        << " prestepLV=" << prestepLV
+        << " poststepLV=" << poststepLV
+        << " GetKineticEnergy[GeV]=" << theTrack->GetKineticEnergy() / CLHEP::GeV
+        << " GetVertexKineticEnergy[GeV]=" << theTrack->GetVertexKineticEnergy() / CLHEP::GeV
+        << " prestepPosition[cm]=("
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().z() / CLHEP::cm << ")"
+        << " poststepPosition[cm]=("
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().z() / CLHEP::cm << ")"
+        << " position[cm]=("
+          << theTrack->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetPosition().z() / CLHEP::cm << ")"
+        << " vertex_position[cm]=("
+          << theTrack->GetVertexPosition().x() / CLHEP::cm << ","
+          << theTrack->GetVertexPosition().y() / CLHEP::cm << ","
+          << theTrack->GetVertexPosition().z() / CLHEP::cm << ")"
+        ;
+      trkInfo->setCrossedBoundary(theTrack);
+      }
+    // Decide whether to store in history
+    if (!trkInfo->isInHistory()){
+      // For fine calo, put every single track in history
+      trkInfo->putInHistory();
+      if (storeAllTracksCalo_) trkInfo->storeTrack(true);
+#ifdef EDM_ML_DEBUG
+      edm::LogInfo("DoFineCalo")
+        << "Putting in history:"
+        << " Track " << id
+        << " vertex[cm]=("
+          << theTrack->GetVertexPosition().x() / CLHEP::cm << ","
+          << theTrack->GetVertexPosition().y() / CLHEP::cm << ","
+          << theTrack->GetVertexPosition().z() / CLHEP::cm << ")"
+        << " position[cm]=("
+          << theTrack->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetPosition().z() / CLHEP::cm << ")"
+        << " energy[GeV]=" << theTrack->GetKineticEnergy() / CLHEP::GeV
+        << " getIDfineCalo=" << trkInfo->getIDfineCalo()
+        << " getIDonCaloSurface=" << trkInfo->getIDonCaloSurface()
+        << " parentID=" << theTrack->GetParentID()
+        ;
+#endif
+      }
+    }
 
   if (testBeam_) {
     if (trkInfo->getIDonCaloSurface() == 0) {

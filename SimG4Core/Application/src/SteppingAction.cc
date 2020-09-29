@@ -10,6 +10,9 @@
 #include "G4UnitsTable.hh"
 #include "G4SystemOfUnits.hh"
 
+#include "G4SteppingManager.hh"
+#include "G4TrackVector.hh"
+
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/isFinite.h"
 
@@ -94,7 +97,6 @@ void SteppingAction::UserSteppingAction(const G4Step* aStep) {
   TrackStatus tstat = (theTrack->GetTrackStatus() == fAlive) ? sAlive : sKilledByProcess;
 
   G4StepPoint* postStep = aStep->GetPostStepPoint();
-
   if (sAlive == tstat && postStep->GetPhysicalVolume() != nullptr) {
     G4StepPoint* preStep = aStep->GetPreStepPoint();
     const G4Region* theRegion = preStep->GetPhysicalVolume()->GetLogicalVolume()->GetRegion();

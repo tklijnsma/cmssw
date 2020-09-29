@@ -4,3 +4,4 @@
 #include "DataFormats/Common/interface/Wrapper.h"
 
 #include <vector>
+#include "G4Track.hh"
