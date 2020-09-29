@@ -8,7 +8,7 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
-#include <iomanip> 
+#include <iomanip>
 #include <limits>
 #include <sys/types.h>
 #include <unistd.h>
@@ -369,7 +369,7 @@ void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vecto
     std::cout << "     inpipeRAM = " << inpipeRAM << std::endl;
 
     //FIXME: write with highest precision
-    inputArrayStream << std::scientific;
+    inputArrayStream << std::setprecision(std::numeric_limits<float>::digits10 + 1) << std::scientific;
     for (size_t i=0; i<hitFeatures.size(); i++) {
 
         for (size_t j=0; j<hitFeatures[i].size(); j++) {
