@@ -1,6 +1,6 @@
 # Running the pepr PF candidate producer for HGCAL
 
-This example demonstrates how to run a particle reconstruction in the HGCAL subdetector via inference of graph neural networks. 
+This example demonstrates how to run the particle reconstruction in the HGCAL subdetector via inference of graph neural networks. 
 
 ## Setup
 
@@ -53,4 +53,14 @@ produces PF candidates straight from rechit information, in this example via the
 The inference of trained graph neural network models is done by sending the rechit information per endcap to a custom Triton server, evaluating the model, 
 and retrieving the regressed energy and position of clustered particle candidates. 
 These candidates are subsequently turned into a PFcandidate collection named `recoPFCandidates_peprCandidateFromHitProducer__RECO`. Particle and charge identification as well as track-cluster matching are work in progress and not included yet. 
+
+**Note:** it may take some time for the event loop in the reconstruction to start, and inference may be slow on a CPU server. The speed of communication with the client and especially the inference will improve drastically once dedicated Triton GPU servers are used. 
+
+The sequence of the producer module is as follows:
+* In the constructor of the producer, the Triton client is started.
+* The producer checks for open pipes (set up to communicate with the Triton server) and will wait until the pipes are open to send the rechit data to the server.
+* In case the pipes are open before the producer reaches the check, the client will wait until the rechit data is passed from the producer.
+* The inference itself is done on the Triton server via the trained model that is stored there, and the results are passed back to the module where a collection of reconstructed particle candidates is created.
+* The Triton client is automatically closed in the destructor of the producer
+
 
