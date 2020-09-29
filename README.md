@@ -1,6 +1,6 @@
 # Running the pepr PF candidate producer for HGCAL
 
-This example demonstrates how to run the particle reconstruction in the HGCAL subdetector via inference of a graph neural network. 
+This example demonstrates how to run a particle reconstruction in the HGCAL subdetector via inference of graph neural networks. 
 
 ## Setup
 
@@ -37,20 +37,20 @@ git clone -b pepr_CMSSW_11_1_0_pre7_peprCandDev https://github.com/gvonsem/produ
 
 ## Generate events
 
-First we produce GEN-SIM-DIGI events, in this example by shooting particles (e.g. photons) 
+First we produce GEN-SIM-DIGI (GSD) events, in this example by shooting particles (e.g. photons) 
 in a certain energy range towards the HGCAL subdetector via the `FlatEtaRangeGunProducer`.
 ```
 cd production_tests
 cmsRun GSD_GUN.py seed=1 outputFile="file:1_GSD.root" maxEvents=5
 ```
-When the GSD events are produced, we can run the reconstruction step: 
+Once the GSD events are produced, we can run the reconstruction step: 
 ```
-cmsRun RECO.py inputFiles="file://1_GSD.root" outputFile="file:1_RECO.root" outputFileDQM="file:1_DQM.root"
+cmsRun RECO.py inputFiles="file://1_GSD.root" outputFile="file:1_RECO.root" outputFileDQM="file:1_DQM.root" maxEvents=5
 ```
 A dedicated EDProducer module, the `peprCandidateFromHitProducer` located 
 in the [RecoHGCAL/GraphReco](https://github.com/gvonsem/cmssw/tree/pepr_CMSSW_11_1_0_pre7_peprCandDev/RecoHGCal/GraphReco) package, 
 produces PF candidates straight from rechit information, in this example via the [Object Condensation](https://arxiv.org/abs/2002.03605v3) method. 
 The inference of trained graph neural network models is done by sending the rechit information per endcap to a custom Triton server, evaluating the model, 
 and retrieving the regressed energy and position of clustered particle candidates. 
-These candidates are subsequently turned into a PFcandidate collection named `recoPFCandidates_peprCandidateFromHitProducer__RECO`.
+These candidates are subsequently turned into a PFcandidate collection named `recoPFCandidates_peprCandidateFromHitProducer__RECO`. Particle and charge identification as well as track-cluster matching are work in progress and not included yet. 
 
