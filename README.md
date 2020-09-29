@@ -47,7 +47,7 @@ Once the GSD events are produced, we can run the reconstruction step:
 ```
 cmsRun RECO.py inputFiles="file://1_GSD.root" outputFile="file:1_RECO.root" outputFileDQM="file:1_DQM.root" maxEvents=5
 ```
-A dedicated EDProducer module, the `peprCandidateFromHitProducer` located 
+A dedicated **EDProducer module**, the `peprCandidateFromHitProducer` located 
 in the [RecoHGCAL/GraphReco](https://github.com/gvonsem/cmssw/tree/pepr_CMSSW_11_1_0_pre7_peprCandDev/RecoHGCal/GraphReco) package, 
 produces PF candidates straight from rechit information, in this example via the [Object Condensation](https://arxiv.org/abs/2002.03605v3) method. 
 The inference of trained graph neural network models is done by sending the rechit information per endcap to a custom Triton server, evaluating the model, 
@@ -56,7 +56,7 @@ These candidates are subsequently turned into a PFcandidate collection named `re
 
 **Note:** it may take some time for the event loop in the reconstruction to start, and inference may be slow on a CPU server. The speed of communication with the client and especially the inference will improve drastically once dedicated Triton GPU servers are used. 
 
-The sequence of the producer module is as follows:
+The **sequence** of the producer module is as follows:
 * In the constructor of the producer, the Triton client is started.
 * The producer checks for open pipes (set up to communicate with the Triton server) and will wait until the pipes are open to send the rechit data to the server.
 * In case the pipes are open before the producer reaches the check, the client will wait until the rechit data is passed from the producer.
