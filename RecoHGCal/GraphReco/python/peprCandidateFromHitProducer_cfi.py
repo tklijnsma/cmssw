@@ -21,25 +21,10 @@ peprCandidateFromHitProducer = cms.EDProducer("peprCandidateFromHitProducer",
         cms.InputTag("HGCalRecHit", "HGCHEBRecHits"),
     ),
     tracks = cms.InputTag("generalTracks"),
-    simClusters = cms.InputTag("mix", "MergedCaloTruth"),
-    # whether or not the model in the graph expects a batch dimension
-    batchedModel=cms.bool(True),
-    #tritonPath=cms.string("/eos/home-j/jkiesele/singularity/triton/"),
-    tritonPath=cms.string("/afs/cern.ch/work/g/gvonsem/public/HGCAL/ML/HGCalML/triton/"),
+    #tritonPath=cms.string("/afs/cern.ch/work/g/gvonsem/public/HGCAL/ML/HGCalML/triton/"),
+    tritonPath=cms.string("RecoHGCal/GraphReco/test/"),
     inpipeName=cms.string("arrayspipe"),
     outpipeName=cms.string("arrayspipe_pred"),
     minEta=cms.double(1.6),
-    maxEta=cms.double(3.0),
-    # # window size in phi and eta
-    # etaFrameWidth=cms.double(0.1),
-    # phiFrameWidth=cms.double(0.1),
-    # # overlap in phi and eta
-    # nEtaSegments=cms.uint32(3),
-    # nPhiSegments=cms.uint32(1),
-    # window size in phi and eta
-    etaFrameWidth=cms.double(0.2),
-    phiFrameWidth=cms.double(0.2),
-    # overlap in phi and eta
-    nEtaSegments=cms.uint32(1),
-    nPhiSegments=cms.uint32(1),   
+    maxEta=cms.double(3.0)  
 )

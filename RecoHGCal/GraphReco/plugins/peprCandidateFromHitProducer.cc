@@ -1,5 +1,5 @@
 /*
- * CMSSW plugin that performs a Window-based inference of networks using RecHits and produced PF candidates.
+ * CMSSW plugin that performs a Window-based inference of networks using RecHits and produces PF candidates.
  *
  * Authors: Gerrit Van Onsem <Gerrit.Van.Onsem@cern.ch>
  *          Marcel Rieger <marcel.rieger@cern.ch>
@@ -26,7 +26,6 @@
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "DataFormats/CaloRecHit/interface/CaloClusterFwd.h"
-#include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 
 #include "RecoLocalCalo/HGCalRecAlgos/interface/RecHitTools.h"
 
@@ -73,10 +72,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     // tokens
     std::vector<edm::EDGetTokenT<HGCRecHitCollection> > recHitTokens_;  
     edm::EDGetTokenT<edm::View<reco::Track>> tracksToken_;
-    edm::EDGetTokenT<std::vector<SimCluster>> simClusterToken_;
 
-    //FIXME, to be replaced
-    bool batchedModel_;
     std::string tritonPath_;
     std::string inpipeName_;
     std::string outpipeName_;
@@ -95,26 +91,18 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     size_t nEtaSegments_;
     size_t nPhiSegments_;
 
-    pid_t forward_client_id_;
-
 };
 
 
 peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterSet& config) :
         recHitCollections_(config.getParameter<std::vector<edm::InputTag> >("recHitCollections")), 
         tracksToken_(consumes<edm::View<reco::Track>>(config.getParameter<edm::InputTag>("tracks"))),
-        simClusterToken_(consumes<std::vector<SimCluster>>(config.getParameter<edm::InputTag>("simClusters"))), 
-        batchedModel_(config.getParameter<bool>("batchedModel")), 
         tritonPath_(config.getParameter<std::string>("tritonPath")), 
         inpipeName_(config.getParameter<std::string>("inpipeName")),
         outpipeName_(config.getParameter<std::string>("outpipeName")),
         //FIXME: actually these are all not needed if windows are created in the constructor!
         minEta_(config.getParameter<double>("minEta")),
-        maxEta_(config.getParameter<double>("maxEta")),
-        etaFrameWidth_(config.getParameter<double>("etaFrameWidth")),
-        phiFrameWidth_(config.getParameter<double>("phiFrameWidth")),
-        nEtaSegments_((size_t)config.getParameter<uint32_t>("nEtaSegments")),
-        nPhiSegments_((size_t)config.getParameter<uint32_t>("nPhiSegments"))
+        maxEta_(config.getParameter<double>("maxEta"))
         {
 
     // get tokens
@@ -122,6 +110,12 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
         recHitTokens_.push_back(consumes<HGCRecHitCollection>(recHitCollection));
     }
    
+    // window size and overlap in phi and eta
+    etaFrameWidth_ = 0.2;
+    phiFrameWidth_ = 0.2;
+    nEtaSegments_ = 1;
+    nPhiSegments_ = 1;
+
 
     produces<reco::PFCandidateCollection>();
     //produces<std::vector<Trackster>>();
@@ -144,7 +138,7 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
     //within the client script, the container is also started in the background and its process ID is stored for later kill command in destructor
     std::string clientcommand = tritonPath_ + "cmssw_oc_forward_client.sh " + inpipeName_ + " " + containerPIDName_ + " &";
     system(clientcommand.data());
-    std::cout << "  Forward client command executed" << std::endl;
+    //std::cout << "  Forward client command executed" << std::endl;
 
 }
 
@@ -155,7 +149,7 @@ peprCandidateFromHitProducer::~peprCandidateFromHitProducer() {
     std::ifstream containerpidfile;
     containerpidfile.open(containerpid_location);
     containerpidfile >> containerpid;
-    std::cout << "Process ID of triton container to kill: " << containerpid << std::endl;
+    //std::cout << "Process ID of triton container being killed: " << containerpid << std::endl;
     system(("kill -9 " + std::to_string(containerpid)).data());
 }
 
@@ -176,9 +170,6 @@ void peprCandidateFromHitProducer::endStream() {
 void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSetup& setup) {
 
     recHitTools_.getEventSetup(setup);
-
-    //auto simclusters = event.get(simClusterToken_);
-    //std::cout << "The size of the simclusters is " << simclusters.size() << std::endl;
 
     // fill rechits into windows
     fillWindows(event);
@@ -214,7 +205,7 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
     for (size_t i=0; i<windowoutputs.size(); i++) {
 
         //loop over windows
-        std::cout << " Window " << i << std::endl;
+        //std::cout << " Window " << i << std::endl;
 
         float E=-9999., X = -9999., Y=-9999., Z=-9999.;
 
@@ -255,32 +246,6 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
             pfcandidates->emplace_back(charge, four_mom, part_type);
 
         }
-
-
-        // //this was a placeholder block to create PF particles from simclusters; just needed for technical tests
-        // for(size_t it=0;it<simclusters.size();it++) {
-
-        //     //std::cout << " particle " << it << std::endl;
-
-        //     //const auto abs_pdg_id = -9999;
-        //     const auto charge = 0; // FIXME!
-                       
-        //     //block inspired by calcP4 method in TICL TracksterP4FromEnergySum plugin
-        //     //starts from 'position (X,Y,Z)'
-        //     //math::XYZVector direction(X, Y, Z);
-        //     math::XYZVectorF direction = simclusters.at(it).momentum();
-        //     direction = direction.Unit();
-        //     math::XYZTLorentzVector cartesian(direction.X(), direction.Y(), direction.Z(), simclusters.at(it).energy());
-        //     //// Convert px, py, pz, E vector to CMS standard pt/eta/phi/m vector
-        //     reco::Candidate::LorentzVector p4(cartesian);
-
-        //     //const auto& four_mom = math::XYZTLorentzVector(X,Y,Z,E);
-        //     const auto& four_mom = p4;
-        //     //std::cout << "    PF particle energy " << four_mom.E() << ", Px = " << four_mom.Px() << ", Py = " << four_mom.Py() << ", Pz = " << four_mom.Pz() << std::endl;
-        //     reco::PFCandidate::ParticleType part_type = reco::PFCandidate::X;
-        //     pfcandidates->emplace_back(charge, four_mom, part_type);
-
-        // }
 
     }
 
@@ -347,7 +312,6 @@ void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vecto
 
     std::string inpipeRAM = "/dev/shm/" + inpipeName_; //write in RAM
     //std::string inpipeRAM = inpipeName_; //do not write in RAM (local testing)
-    ////std::ofstream inputArrayStream(inpipeRAM.c_str()); 
 
     //wait until pipe is open
     std::cout << "Checking if pipe is open..." << std::endl;
@@ -366,7 +330,6 @@ void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vecto
     inputArrayStream.flush();
     std::cout << "     inpipeRAM = " << inpipeRAM << std::endl;
 
-    //FIXME: write with highest precision
     inputArrayStream << std::setprecision(std::numeric_limits<float>::digits10 + 1) << std::scientific;
     for (size_t i=0; i<hitFeatures.size(); i++) {
 
@@ -384,7 +347,7 @@ void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<floa
 
     std::string outpipeRAM = "/dev/shm/" + outpipeName_; //read from RAM
     //std::string outpipeRAM = outpipeName_; //do not read from RAM (local testing)
-    ////std::ifstream outputArrayStream(outpipeRAM.c_str()); 
+
     std::ifstream outputArrayStream;
     //outputArrayStream.open(outpipeRAM.c_str(), std::ofstream::out | std::ofstream::app);
     outputArrayStream.open(outpipeRAM.c_str());
@@ -395,9 +358,7 @@ void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<floa
         std::cout << "Output array file opened!" << std::endl;
         while ( true )   
         {
-            //std::cout << " ... reading new line ... "<< std::endl;
             getline (outputArrayStream,line);
-            //std::cout << " ... read new line ... "<< std::endl;
             std::cout << line << '\n';
 
             if(line.empty()){
@@ -433,7 +394,6 @@ void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<floa
                 //positive Z of rechit means Z = 320 cm (as regressed X,Y is measured on HGCAL surface)
                 if ( std::stof(Z_str) > 0 ) Z = 320.;  //in cm
                 else Z = -320.;   //in cm
-
                     
                 //std::cout << "    Storing values from the model output" << std::endl;
                 std::vector<float> candidate = {E, X, Y, Z };
@@ -449,7 +409,7 @@ void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<floa
             }
 
         }
-        std::cout << "Closing output array stream" << std::endl;
+        //std::cout << "Closing output array stream" << std::endl;
         outputArrayStream.close();
     }
 
