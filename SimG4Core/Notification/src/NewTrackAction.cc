@@ -45,6 +45,21 @@ void NewTrackAction::addUserInfoToSecondary(G4Track *aTrack, const TrackInformat
   // ralf.ulrich@kit.edu: it is more efficient to use the constructor to copy all data and modify later only when needed
 
   TrackInformation *trkInfo = new TrackInformation();
+
+  math::XYZTLorentzVectorD momentumAtCreation = motherInfo.momentumAtCreation(aTrack);
+#ifdef EDM_ML_DEBUG  
+  edm::LogVerbatim("DoFineCalo")
+    << "Secondary " << aTrack->GetTrackID() << " (address " << aTrack << ")"
+    << " has parent " << aTrack->GetParentID()
+    << "; parent momentum at creation = ("
+    << momentumAtCreation.Px() << ","
+    << momentumAtCreation.Py() << ","
+    << momentumAtCreation.Pz() << ","
+    << momentumAtCreation.E() << ")"
+    ;
+#endif
+  trkInfo->setParentMomentumAtCreation(momentumAtCreation);
+
   //  LogDebug("SimG4CoreApplication") << "NewTrackAction called for "
   //				   << aTrack->GetTrackID()
   //				   << " mother " << motherInfo.isPrimary()

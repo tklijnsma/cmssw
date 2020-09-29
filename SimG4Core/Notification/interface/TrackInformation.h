@@ -1,9 +1,13 @@
 #ifndef SimG4Core_TrackInformation_H
 #define SimG4Core_TrackInformation_H
 
+#include "FWCore/Utilities/interface/Exception.h"
 #include "G4VUserTrackInformation.hh"
-
 #include "G4Allocator.hh"
+#include "G4Track.hh"
+#include "DataFormats/Math/interface/Vector3D.h"
+#include "DataFormats/Math/interface/LorentzVector.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 class TrackInformation : public G4VUserTrackInformation {
 public:
@@ -55,6 +59,50 @@ public:
   int getIDfineCalo() const { return ((idFineCalo_ > 0) ? idFineCalo_ : idOnCaloSurface_); }
   void setIDfineCalo(int id) { idFineCalo_ = id; }
 
+  bool passesCaloSplittingCriterion() const { return flagCaloSplittingCriterion_; }
+  void setPassesCaloSplittingCriterion() { flagCaloSplittingCriterion_ = true; }
+
+
+  // Boundary crossing variables
+  void setCrossedBoundary(const G4Track* track){
+    crossedBoundary_ = true;
+    idAtBoundary_ = track->GetTrackID();
+    positionAtBoundary_ = math::XYZVectorD(
+      track->GetPosition().x() / CLHEP::cm,
+      track->GetPosition().y() / CLHEP::cm,
+      track->GetPosition().z() / CLHEP::cm
+      );
+    momentumAtBoundary_ = math::XYZTLorentzVectorD(
+      track->GetMomentum().x() / CLHEP::GeV,
+      track->GetMomentum().y() / CLHEP::GeV,
+      track->GetMomentum().z() / CLHEP::GeV,
+      track->GetKineticEnergy() / CLHEP::GeV
+      );
+    }
+  bool crossedBoundary() const { return crossedBoundary_; }
+  math::XYZVectorD getPositionAtBoundary() const {
+    assertCrossedBoundary();
+    return positionAtBoundary_;
+    }
+  math::XYZTLorentzVectorD getMomentumAtBoundary() const {
+    assertCrossedBoundary();
+    return momentumAtBoundary_;
+    }
+  int getIDAtBoundary() const {
+    assertCrossedBoundary();
+    return idAtBoundary_;
+    }
+  // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
+  bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
+  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+    return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
+    }
+  void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
+    hasCorrectedMomentumAtBoundary_ = true;
+    correctedMomentumAtBoundary_ = corrMom;
+    }
+
+
   // Generator information
   int genParticlePID() const { return genParticlePID_; }
   void setGenParticlePID(int id) { genParticlePID_ = id; }
@@ -72,6 +120,57 @@ public:
 
   void Print() const override;
 
+  void insertMomentumAtCreationSecondary(const G4Track* secondary, const G4Track* mother){
+    if (momentumAtCreationSecondaryMap_.count(secondary) > 0) { return; } // If already in map, don't add again
+#ifdef EDM_ML_DEBUG
+    edm::LogVerbatim("DoFineCalo")
+      << "Mother " << mother->GetTrackID()
+      << ": Inserting momentumAtCreation for secondary " << secondary->GetTrackID()
+      << " (address " << secondary << ")"
+      << " momentumAtCreation[GeV]=("
+      << mother->GetMomentum().x() / CLHEP::GeV << ","
+      << mother->GetMomentum().y() / CLHEP::GeV << ","
+      << mother->GetMomentum().z() / CLHEP::GeV << ","
+      << mother->GetKineticEnergy() / CLHEP::GeV << ")"
+      << " Esecondary[GeV]=" << secondary->GetKineticEnergy() / CLHEP::GeV
+      ;
+#endif
+    momentumAtCreationSecondaryMap_.insert(
+      std::pair<const G4Track*, math::XYZTLorentzVectorD>(
+        secondary, math::XYZTLorentzVectorD(
+          mother->GetMomentum().x() / CLHEP::GeV,
+          mother->GetMomentum().y() / CLHEP::GeV,
+          mother->GetMomentum().z() / CLHEP::GeV,
+          mother->GetKineticEnergy() / CLHEP::GeV
+          )
+        )
+      );
+    }
+
+  math::XYZTLorentzVectorD momentumAtCreation(const G4Track* secondary) const {
+    auto momentumAtCreationPair = momentumAtCreationSecondaryMap_.find(secondary);
+    if ( momentumAtCreationPair == momentumAtCreationSecondaryMap_.end() ) {
+      throw cms::Exception("Unknown", "TrackInformation")
+        << "Requested momentumAtCreation of track " << secondary->GetTrackID()
+        << " with address " << secondary
+        << ", but it is not a daughter of " << getIDfineCalo()
+        ;
+      }
+    return momentumAtCreationPair->second;
+    }
+
+  bool hasParentMomentumAtCreation() const {return hasParentMomentumAtCreation_;}
+  math::XYZTLorentzVectorD parentMomentumAtCreation() const {
+    if (!hasParentMomentumAtCreation_)
+      throw cms::Exception("Unknown", "TrackInformation")
+      << "Attempted to get parentMomentumAtCreation, but it is not set";
+    return parentMomentumAtCreation_;
+    }
+  void setParentMomentumAtCreation(math::XYZTLorentzVectorD fparentMomentum){
+    hasParentMomentumAtCreation_ = true;
+    parentMomentumAtCreation_ = fparentMomentum;
+    }
+
 private:
   bool storeTrack_;
   bool isPrimary_;
@@ -84,11 +183,32 @@ private:
   int idLastVolume_;
   bool caloIDChecked_;
   int idFineCalo_;
+  bool crossedBoundary_;
+  bool idAtBoundary_;
+  math::XYZVectorD positionAtBoundary_;
+  math::XYZTLorentzVectorD momentumAtBoundary_;
+  bool hasCorrectedMomentumAtBoundary_;
+  math::XYZTLorentzVectorD correctedMomentumAtBoundary_;
+  bool flagCaloSplittingCriterion_;
+
   int genParticlePID_, caloSurfaceParticlePID_;
   double genParticleP_, caloSurfaceParticleP_;
 
   bool hasCastorHit_;
   int castorHitPID_;
+
+  bool hasParentMomentumAtCreation_;
+  math::XYZTLorentzVectorD parentMomentumAtCreation_;
+  std::map< const G4Track*, math::XYZTLorentzVectorD > momentumAtCreationSecondaryMap_;
+
+  void assertCrossedBoundary() const {
+    if (!crossedBoundary_){
+      throw cms::Exception("Unknown", "TrackInformation")
+        << "Assert crossed boundary failed for track "
+        << getIDonCaloSurface() << " (fine: " << getIDfineCalo() << ")"
+        ;
+      }
+    }
 
   // Restrict construction to friends
   TrackInformation()
@@ -104,12 +224,16 @@ private:
         idLastVolume_(-1),
         caloIDChecked_(false),
         idFineCalo_(-1),
+        crossedBoundary_(false),
+        flagCaloSplittingCriterion_(false),
         genParticlePID_(-1),
         caloSurfaceParticlePID_(0),
         genParticleP_(0),
         caloSurfaceParticleP_(0),
         hasCastorHit_(false),
-        castorHitPID_(0) {}
+        castorHitPID_(0),
+        hasParentMomentumAtCreation_(false)
+        {}
   friend class NewTrackAction;
 };
 

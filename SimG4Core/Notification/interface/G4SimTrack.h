@@ -3,6 +3,8 @@
 
 #include "DataFormats/Math/interface/Vector3D.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
+#include "FWCore/Utilities/interface/Exception.h"
+#include "SimG4Core/Notification/interface/TrackWithHistory.h"
 #include <vector>
 #include <cmath>
 
@@ -20,7 +22,10 @@ public:
         parentID_(-1),
         parentMomentum_(math::XYZVectorD(0., 0., 0.)),
         tkSurfacePosition_(math::XYZVectorD(0., 0., 0.)),
-        tkSurfaceMomentum_(math::XYZTLorentzVectorD(0., 0., 0., 0.)) {}
+        tkSurfaceMomentum_(math::XYZTLorentzVectorD(0., 0., 0., 0.)),
+        crossedBoundary_(false)
+        // , hasCorrectedMomentumAtBoundary_(false)
+        {}
 
   G4SimTrack(int iid, int ipart, const math::XYZVectorD& ip, double ie, int iv, int ig, const math::XYZVectorD& ipmom)
       : id_(iid),
@@ -31,7 +36,10 @@ public:
         igenpart_(ig),
         parentMomentum_(ipmom),
         tkSurfacePosition_(math::XYZVectorD(0., 0., 0.)),
-        tkSurfaceMomentum_(math::XYZTLorentzVectorD(0., 0., 0., 0.)) {}
+        tkSurfaceMomentum_(math::XYZTLorentzVectorD(0., 0., 0., 0.)),
+        crossedBoundary_(false)
+        // , hasCorrectedMomentumAtBoundary_(false)
+        {}
 
   G4SimTrack(int iid,
              int ipart,
@@ -50,7 +58,10 @@ public:
         igenpart_(ig),
         parentMomentum_(ipmom),
         tkSurfacePosition_(tkpos),
-        tkSurfaceMomentum_(tkmom) {}
+        tkSurfaceMomentum_(tkmom),
+        crossedBoundary_(false)
+        // , hasCorrectedMomentumAtBoundary_(false)
+        {}
 
   ~G4SimTrack() {}
 
@@ -69,6 +80,49 @@ public:
   // is stored, else = -1)
   int parentID() const { return parentID_; }
 
+  void copyCrossedBoundaryVars(const TrackWithHistory* track){
+    if (track->crossedBoundary()){
+      crossedBoundary_ = track->crossedBoundary();
+      idAtBoundary_ = track->getIDAtBoundary();
+      positionAtBoundary_ = track->getPositionAtBoundary();
+      momentumAtBoundary_ = track->getMomentumAtBoundary();
+      correctedMomentumAtBoundary_ = track->getCorrectedMomentumAtBoundary();
+      }
+    }
+  // Boundary crossing variables
+  // void setCrossedBoundaryPosMom(int id, const math::XYZVectorD position, const math::XYZTLorentzVectorD momentum){
+  //   crossedBoundary_ = true;
+  //   idAtBoundary_ = id;
+  //   positionAtBoundary_ = position;
+  //   momentumAtBoundary_ = momentum;
+  //   }
+  bool crossedBoundary() const { return crossedBoundary_; }
+  math::XYZVectorD getPositionAtBoundary() const {
+    assertCrossedBoundary();
+    return positionAtBoundary_;
+    }
+  math::XYZTLorentzVectorD getMomentumAtBoundary() const {
+    assertCrossedBoundary();
+    return momentumAtBoundary_;
+    }
+  math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+    assertCrossedBoundary();
+    return correctedMomentumAtBoundary_;
+    }
+  int getIDAtBoundary() const {
+    assertCrossedBoundary();
+    return idAtBoundary_;
+    }
+  // // Getter/setter for corrected momentum at boundary. Returns ordinary momentum at boundary if not specified.
+  // bool hasCorrectedMomentumAtBoundary() const {return hasCorrectedMomentumAtBoundary_;}
+  // math::XYZTLorentzVectorD getCorrectedMomentumAtBoundary() const {
+  //   return (hasCorrectedMomentumAtBoundary_) ? correctedMomentumAtBoundary_ : getMomentumAtBoundary();
+  //   }
+  // void setCorrectedMomentumAtBoundary(math::XYZTLorentzVectorD corrMom){
+  //   hasCorrectedMomentumAtBoundary_ = true;
+  //   correctedMomentumAtBoundary_ = corrMom;
+  //   }
+
 private:
   int id_;
   int ipart_;
@@ -80,6 +134,18 @@ private:
   math::XYZVectorD parentMomentum_;
   math::XYZVectorD tkSurfacePosition_;
   math::XYZTLorentzVectorD tkSurfaceMomentum_;
+  bool crossedBoundary_;
+  int idAtBoundary_;
+  math::XYZVectorD positionAtBoundary_;
+  math::XYZTLorentzVectorD momentumAtBoundary_;
+  // bool hasCorrectedMomentumAtBoundary_;
+  math::XYZTLorentzVectorD correctedMomentumAtBoundary_;
+  void assertCrossedBoundary() const {
+    if (!crossedBoundary_){
+      throw cms::Exception("Unknown", "G4SimTrack")
+        << "Assert crossed boundary failed for track " << id_;
+      }
+    }
 };
 
 #endif
