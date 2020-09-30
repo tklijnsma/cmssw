@@ -21,6 +21,7 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/Exception.h"
+#include "FWCore/ParameterSet/interface/FileInPath.h"
 
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
@@ -73,7 +74,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     std::vector<edm::EDGetTokenT<HGCRecHitCollection> > recHitTokens_;  
     edm::EDGetTokenT<edm::View<reco::Track>> tracksToken_;
 
-    std::string tritonPath_;
+    std::string tritonScript_;
     std::string inpipeName_;
     std::string outpipeName_;
     std::string containerPIDName_;
@@ -97,7 +98,7 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
 peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterSet& config) :
         recHitCollections_(config.getParameter<std::vector<edm::InputTag> >("recHitCollections")), 
         tracksToken_(consumes<edm::View<reco::Track>>(config.getParameter<edm::InputTag>("tracks"))),
-        tritonPath_(config.getParameter<std::string>("tritonPath")), 
+        tritonScript_(config.getParameter<edm::FileInPath>("tritonScript").fullPath()), 
         inpipeName_(config.getParameter<std::string>("inpipeName")),
         outpipeName_(config.getParameter<std::string>("outpipeName")),
         //FIXME: actually these are all not needed if windows are created in the constructor!
@@ -136,7 +137,7 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
     //https://github.com/cms-pepr/HGCalML/tree/master/triton
     
     //within the client script, the container is also started in the background and its process ID is stored for later kill command in destructor
-    std::string clientcommand = tritonPath_ + "cmssw_oc_forward_client.sh " + inpipeName_ + " " + containerPIDName_ + " &";
+    std::string clientcommand = tritonScript_ + " " + inpipeName_ + " " + containerPIDName_ + " &";
     system(clientcommand.data());
     //std::cout << "  Forward client command executed" << std::endl;
 

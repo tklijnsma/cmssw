@@ -48,4 +48,23 @@ The **sequence** of the producer module is as follows:
 * The inference itself is done on the Triton server via the trained model that is stored there, and the results are passed back to the module where a collection of reconstructed particle candidates is created.
 * The Triton client is automatically closed in the destructor of the producer
 
+### Adding the peprCandidateFromHitProducer to your favorite RECO config
 
+The `peprCandidateFromHitProducer` can be loaded from the [config fragment](python/peprCandidateFromHitProducer_cfi.py) and added to a RECO sequence in the usual way. Add the following line to your python config
+
+```
+process.load("RecoHGCal/GraphReco/python/peprCandidateFromHitProducer_cfi")
+```
+
+this adds the producer to the process, you should then schedule it by adding it to a scheduled sequence, for example:
+
+```
+process.reconstruction_step += process.peprCandidateFromHitProducer
+```
+
+It's not expected that you would need to change arguments from their default values, but 
+this can be done as for other EDProducer modules, for example
+
+```
+process.peprCandidateFromHitProducer.tracks = "globalMuons"  # Not a very good idea, but possible
+```

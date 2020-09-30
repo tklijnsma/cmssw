@@ -131,11 +131,7 @@ process.maxEvents.input = cms.untracked.int32(options.maxEvents)
 
 
 # pepr PF candidate producer
-test_dir = os.path.expandvars("$CMSSW_BASE/src/RecoHGCal/GraphReco/test/")
-from RecoHGCal.GraphReco.peprCandidateFromHitProducer_cfi import peprCandidateFromHitProducer
-process.peprCandidateFromHitProducer = peprCandidateFromHitProducer.clone(
-	tritonPath=cms.string(test_dir),
-)
+process.load("RecoHGCal.GraphReco.peprCandidateFromHitProducer_cfi")
 process.reconstruction_step += process.peprCandidateFromHitProducer
 
 
