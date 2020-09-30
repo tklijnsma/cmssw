@@ -33,7 +33,7 @@ Once the GSD events are produced, we can run the reconstruction step:
 cmsRun RECO_pf.py inputFiles="file://1_GSD.root" outputFile="file:1_RECO.root" outputFileDQM="file:1_DQM.root" maxEvents=5
 ```
 A dedicated **EDProducer module**, the `peprCandidateFromHitProducer` located 
-in the [RecoHGCAL/GraphReco](https://github.com/gvonsem/cmssw/tree/pepr_CMSSW_11_1_0_pre7_peprCandDev/RecoHGCal/GraphReco) package, 
+in the [RecoHGCAL/GraphReco](.) package, 
 produces PF candidates straight from rechit information, in this example via the [Object Condensation](https://arxiv.org/abs/2002.03605v3) method. 
 The inference of trained graph neural network models is done by sending the rechit information per endcap to a custom Triton server, evaluating the model, 
 and retrieving the regressed energy and position of clustered particle candidates. 
