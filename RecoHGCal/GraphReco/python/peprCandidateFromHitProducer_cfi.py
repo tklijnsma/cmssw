@@ -24,6 +24,7 @@ peprCandidateFromHitProducer = cms.EDProducer("peprCandidateFromHitProducer",
     tritonScript=cms.FileInPath("RecoHGCal/GraphReco/test/cmssw_oc_forward_client.sh"),
     inpipeName=cms.string("arrayspipe"),
     outpipeName=cms.string("arrayspipe_pred"),
+    minCandEnergy=cms.double(1.0),
     minEta=cms.double(1.6),
     maxEta=cms.double(3.0)  
 )
