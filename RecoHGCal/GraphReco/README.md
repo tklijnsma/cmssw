@@ -20,7 +20,20 @@ git cms-merge-topic cms-pepr:pepr_CMSSW_11_1_0_pre7
 scram b -j 8
 ```
 
-## Generate events
+This will check out the necessary packages. To use the PEPR reconstruction, you only need to add the producer to the RECO sequence:
+```
+process.load(“RecoHGCal/GraphReco/python/peprCandidateFromHitProducer_cfi”)
+```
+This will provide 
+```
+process.peprCandidateFromHitProducer
+```
+and produce ```recoPFCandidates_peprCandidateFromHitProducer__RECO```
+
+
+## Generate events and more information
+
+For testing, also scripts to produce events are provided.
 
 First we produce GEN-SIM-DIGI (GSD) events, in this example by shooting particles (e.g. photons) 
 in a certain energy range towards the HGCAL subdetector via the `FlatEtaRangeGunProducer`.
@@ -34,12 +47,22 @@ cmsRun RECO_pf.py inputFiles="file://1_GSD.root" outputFile="file:1_RECO.root" o
 ```
 A dedicated **EDProducer module**, the `peprCandidateFromHitProducer` located 
 in the [RecoHGCAL/GraphReco](.) package, 
-produces PF candidates straight from rechit information, in this example via the [Object Condensation](https://arxiv.org/abs/2002.03605v3) method. 
+produces PF candidates straight from rechit information, in this example via the [Object Condensation](https://arxiv.org/abs/2002.03605) method. 
+
 The inference of trained graph neural network models is done by sending the rechit information per endcap to a custom Triton server, evaluating the model, 
 and retrieving the regressed energy and position of clustered particle candidates. 
 These candidates are subsequently turned into a PFcandidate collection named `recoPFCandidates_peprCandidateFromHitProducer__RECO`. Particle and charge identification as well as track-cluster matching are work in progress and not included yet. 
 
-**Note:** it may take some time for the event loop in the reconstruction to start, and inference may be slow on a CPU server. The speed of communication with the client and especially the inference will improve drastically once dedicated Triton GPU servers are used. 
+**Note:** it may take some time for the first event in the reconstruction to start. The messages printed during that time will be:
+
+```
+INFO:    Convert SIF file to sandbox...
+...
+Checking if pipe is open...
+```
+The speed of communication with the client and launching it will drastically improve with a next CMSSW update, where the new version of the client will be included directly in CMSSW. 
+Moreover, also the inference time on each event will improve by orders of magnitude once dedicated Triton GPU servers are used. Right now, with only a CPU triton server, it is not advised to process full events, this will take multiple minutes.
+
 
 The **sequence** of the producer module is as follows:
 * In the constructor of the producer, the Triton client is started.
