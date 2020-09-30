@@ -180,10 +180,10 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
     // run the evaluation per window
     std::vector<std::vector<float> >  hitFeatures;
     for (auto & window : windows_) {
-        std::cout << "New window " << std::endl;
+        //std::cout << "New window " << std::endl;
 
         hitFeatures = window.getHitFeatures();
-        std::cout << "   hitFeatures size = " << hitFeatures.size() << std::endl;
+        //std::cout << "   hitFeatures size = " << hitFeatures.size() << std::endl;
         //std::cout << "      number of features per hit = " << hitFeatures[0].size() << std::endl;
 
         writeInputArrays(hitFeatures);
@@ -200,7 +200,7 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
 
     // making candidate collection
     auto pfcandidates = std::make_unique<reco::PFCandidateCollection>();
-    std::cout << "Creating PF candidates " << std::endl;
+    //std::cout << "Creating PF candidates " << std::endl;
 
     for (size_t i=0; i<windowoutputs.size(); i++) {
 
@@ -253,7 +253,7 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
 
     event.put(std::move(pfcandidates));
 
-    std::cout << "Results produced and put in event" << std::endl;
+    //std::cout << "Results produced and put in event" << std::endl;
 
 
     // clear all windows
@@ -261,7 +261,7 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
         window.clear();
     }
 
-    std::cout << "Windows cleared" << std::endl;
+    //std::cout << "Windows cleared" << std::endl;
 }
 
 
@@ -272,7 +272,7 @@ void peprCandidateFromHitProducer::fillWindows(const edm::Event& event) {
         throw cms::Exception("NoWindows") << "no windows initialized";
     }
     
-    std::cout << "Number of windows = " << windows_.size() << std::endl;
+    //std::cout << "Number of windows = " << windows_.size() << std::endl;
     
     // copied block from window ntupler code
     // get rechits, get positions and merge collections
@@ -328,7 +328,7 @@ void peprCandidateFromHitProducer::writeInputArrays(const std::vector<std::vecto
     std::ofstream inputArrayStream;
     inputArrayStream.open(inpipeRAM.c_str(), std::ofstream::out | std::ofstream::app);
     inputArrayStream.flush();
-    std::cout << "     inpipeRAM = " << inpipeRAM << std::endl;
+    //std::cout << "     inpipeRAM = " << inpipeRAM << std::endl;
 
     inputArrayStream << std::setprecision(std::numeric_limits<float>::digits10 + 1) << std::scientific;
     for (size_t i=0; i<hitFeatures.size(); i++) {
@@ -351,15 +351,15 @@ void peprCandidateFromHitProducer::readOutputArrays(std::vector<std::vector<floa
     std::ifstream outputArrayStream;
     //outputArrayStream.open(outpipeRAM.c_str(), std::ofstream::out | std::ofstream::app);
     outputArrayStream.open(outpipeRAM.c_str());
-    std::cout << "     outpipeRAM = " << outpipeRAM << std::endl;
+    //std::cout << "     outpipeRAM = " << outpipeRAM << std::endl;
 
     std::string line;
     if(outputArrayStream.is_open()) {
-        std::cout << "Output array file opened!" << std::endl;
+        //std::cout << "Output array file opened!" << std::endl;
         while ( true )   
         {
             getline (outputArrayStream,line);
-            std::cout << line << '\n';
+            //std::cout << line << '\n';
 
             if(line.empty()){
                 break;
