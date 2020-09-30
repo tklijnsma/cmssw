@@ -16,23 +16,8 @@ scram b -j 8
 Install custom packages: 
 ```
 git cms-init
-git cms-merge-topic gvonsem:pepr_CMSSW_11_1_0_pre7_peprCandDev
-git clone --recursive https://github.com/CMS-HGCAL/reco-prodtools.git reco_prodtools
+git cms-merge-topic cms-pepr:pepr_CMSSW_11_1_0_pre7
 scram b -j 8
-```
-
-Create prodtools templates:
-```
-cd reco_prodtools/templates/python
-./produceSkeletons_D49_NoSmear_NoDQMNoHLT_PU_AVE_200_BX_25ns.sh
-cd ../../../
-scram b python
-```
-
-Check out the configuration files to generate events:
-```
-cd ../../
-git clone -b pepr_CMSSW_11_1_0_pre7_peprCandDev https://github.com/gvonsem/production_tests.git
 ```
 
 ## Generate events
@@ -40,7 +25,7 @@ git clone -b pepr_CMSSW_11_1_0_pre7_peprCandDev https://github.com/gvonsem/produ
 First we produce GEN-SIM-DIGI (GSD) events, in this example by shooting particles (e.g. photons) 
 in a certain energy range towards the HGCAL subdetector via the `FlatEtaRangeGunProducer`.
 ```
-cd production_tests
+cd RecoHGCal/GraphReco/test
 cmsRun GSD_GUN.py seed=1 outputFile="file:1_GSD.root" maxEvents=5
 ```
 Once the GSD events are produced, we can run the reconstruction step: 
