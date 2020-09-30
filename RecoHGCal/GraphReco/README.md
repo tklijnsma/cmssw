@@ -20,18 +20,12 @@ git cms-merge-topic cms-pepr:pepr_CMSSW_11_1_0_pre7
 scram b -j 8
 ```
 
-Check out the configuration files to generate events:
-```
-cd ../../
-git clone https://github.com/cms-pepr/production_tests
-```
-
 ## Generate events
 
 First we produce GEN-SIM-DIGI (GSD) events, in this example by shooting particles (e.g. photons) 
 in a certain energy range towards the HGCAL subdetector via the `FlatEtaRangeGunProducer`.
 ```
-cd production_tests
+cd RecoHGCal/GraphReco/test
 cmsRun GSD_GUN.py seed=1 outputFile="file:1_GSD.root" maxEvents=5
 ```
 Once the GSD events are produced, we can run the reconstruction step: 
