@@ -8,6 +8,7 @@
 <use   name="Geometry/CaloGeometry"/>
 <use   name="TrackingTools/Records"/>
 <use   name="DataFormats/HGCRecHit"/>
+<use   name="DataFormats/HGCalReco"/>
 
   <use   name="SimGeneral/HepPDTRecord"/>
   <use   name="TrackPropagation/RungeKutta"/>
