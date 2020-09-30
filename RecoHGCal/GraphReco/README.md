@@ -16,7 +16,7 @@ scram b -j 8
 Install custom packages: 
 ```
 git cms-init
-git cms-merge-topic gvonsem:pepr_CMSSW_11_1_0_pre7_peprCandDev
+git cms-merge-topic cms-pepr:pepr_CMSSW_11_1_0_pre7
 scram b -j 8
 ```
 
