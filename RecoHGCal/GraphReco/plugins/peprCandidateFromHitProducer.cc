@@ -82,6 +82,8 @@ class peprCandidateFromHitProducer: public edm::stream::EDProducer<> {
     // rechit tools
     hgcal::RecHitTools recHitTools_;
 
+    double minCandEnergy_;
+
     // windows
     std::vector<InferenceWindow> windows_;
 
@@ -101,6 +103,7 @@ peprCandidateFromHitProducer::peprCandidateFromHitProducer(const edm::ParameterS
         tritonScript_(config.getParameter<edm::FileInPath>("tritonScript").fullPath()), 
         inpipeName_(config.getParameter<std::string>("inpipeName")),
         outpipeName_(config.getParameter<std::string>("outpipeName")),
+        minCandEnergy_(config.getParameter<double>("minCandEnergy")),
         //FIXME: actually these are all not needed if windows are created in the constructor!
         minEta_(config.getParameter<double>("minEta")),
         maxEta_(config.getParameter<double>("maxEta"))
@@ -220,6 +223,10 @@ void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSe
                      
             //inner index as filled in readOutputArrays
             E = windowoutputs[i][j][0];
+
+            //temporary lower threshold on energy of candidates
+            if(E < minCandEnergy_) continue;
+
             X = windowoutputs[i][j][1];
             Y = windowoutputs[i][j][2];
             Z = windowoutputs[i][j][3];
