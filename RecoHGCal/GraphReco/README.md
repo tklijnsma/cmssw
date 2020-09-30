@@ -17,22 +17,13 @@ Install custom packages:
 ```
 git cms-init
 git cms-merge-topic gvonsem:pepr_CMSSW_11_1_0_pre7_peprCandDev
-git clone --recursive https://github.com/CMS-HGCAL/reco-prodtools.git reco_prodtools
 scram b -j 8
-```
-
-Create prodtools templates:
-```
-cd reco_prodtools/templates/python
-./produceSkeletons_D49_NoSmear_NoDQMNoHLT_PU_AVE_200_BX_25ns.sh
-cd ../../../
-scram b python
 ```
 
 Check out the configuration files to generate events:
 ```
 cd ../../
-git clone -b pepr_CMSSW_11_1_0_pre7_peprCandDev https://github.com/gvonsem/production_tests.git
+git clone https://github.com/cms-pepr/production_tests
 ```
 
 ## Generate events
