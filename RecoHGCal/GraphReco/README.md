@@ -30,7 +30,7 @@ cmsRun GSD_GUN.py seed=1 outputFile="file:1_GSD.root" maxEvents=5
 ```
 Once the GSD events are produced, we can run the reconstruction step: 
 ```
-cmsRun RECO.py inputFiles="file://1_GSD.root" outputFile="file:1_RECO.root" outputFileDQM="file:1_DQM.root" maxEvents=5
+cmsRun RECO_pf.py inputFiles="file://1_GSD.root" outputFile="file:1_RECO.root" outputFileDQM="file:1_DQM.root" maxEvents=5
 ```
 A dedicated **EDProducer module**, the `peprCandidateFromHitProducer` located 
 in the [RecoHGCAL/GraphReco](https://github.com/gvonsem/cmssw/tree/pepr_CMSSW_11_1_0_pre7_peprCandDev/RecoHGCal/GraphReco) package, 
