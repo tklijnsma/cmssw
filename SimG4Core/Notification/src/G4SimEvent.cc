@@ -60,7 +60,15 @@ void G4SimEvent::load(edm::SimTrackContainer& c) const {
     // if (trk->crossedBoundary())
     //   t.setCrossedBoundaryPosMom(trk->getIDAtBoundary(), trk->getPositionAtBoundary(), trk->getMomentumAtBoundary());
     // if (trk->hasCorrectedMomentumAtBoundary()) t.setCorrectedMomentumAtBoundary(trk->getCorrectedMomentumAtBoundary());
-    t.copyCrossedBoundaryVars(trk);
+    // t.copyCrossedBoundaryVars(trk);
+    if (trk->crossedBoundary())
+      t.setCrossedBoundaryVars(
+        trk->crossedBoundary(),
+        trk->getIDAtBoundary(),
+        trk->getPositionAtBoundary(),
+        trk->getMomentumAtBoundary(),
+        trk->getCorrectedMomentumAtBoundary()
+        );
     c.push_back(t);
   }
   std::stable_sort(c.begin(), c.end(), IdSort());

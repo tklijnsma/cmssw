@@ -4,7 +4,7 @@
 #include "SimDataFormats/Track/interface/CoreSimTrack.h"
 #include "DataFormats/Math/interface/Vector3D.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
-#include "SimG4Core/Notification/interface/G4SimTrack.h"
+// #include "SimG4Core/Notification/interface/G4SimTrack.h"
 #include "FWCore/Utilities/interface/Exception.h"
 
 class SimTrack : public CoreSimTrack {
@@ -55,15 +55,29 @@ public:
   //   positionAtBoundary_ = position;
   //   momentumAtBoundary_ = momentum;
   //   }
-  void copyCrossedBoundaryVars(const G4SimTrack* track){
-    if (track->crossedBoundary()){
-      crossedBoundary_ = track->crossedBoundary();
-      idAtBoundary_ = track->getIDAtBoundary();
-      positionAtBoundary_ = track->getPositionAtBoundary();
-      momentumAtBoundary_ = track->getMomentumAtBoundary();
-      correctedMomentumAtBoundary_ = track->getCorrectedMomentumAtBoundary();
-      }
+  // void copyCrossedBoundaryVars(const G4SimTrack* track){
+  //   if (track->crossedBoundary()){
+  //     crossedBoundary_ = track->crossedBoundary();
+  //     idAtBoundary_ = track->getIDAtBoundary();
+  //     positionAtBoundary_ = track->getPositionAtBoundary();
+  //     momentumAtBoundary_ = track->getMomentumAtBoundary();
+  //     correctedMomentumAtBoundary_ = track->getCorrectedMomentumAtBoundary();
+  //     }
+  //   }
+  void setCrossedBoundaryVars(
+    bool crossedBoundary,
+    int idAtBoundary,
+    math::XYZVectorD positionAtBoundary,
+    math::XYZTLorentzVectorD momentumAtBoundary,
+    math::XYZTLorentzVectorD correctedMomentumAtBoundary
+    ){
+    crossedBoundary_ = crossedBoundary;
+    idAtBoundary_ = idAtBoundary;
+    positionAtBoundary_ = positionAtBoundary;
+    momentumAtBoundary_ = momentumAtBoundary;
+    correctedMomentumAtBoundary_ = correctedMomentumAtBoundary;
     }
+
   bool crossedBoundary() const { return crossedBoundary_; }
   math::XYZVectorD getPositionAtBoundary() const {
     assertCrossedBoundary();
