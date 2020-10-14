@@ -29,6 +29,7 @@ public:
 
   inline void addPrimary(unsigned int id){ primaryIDs_.insert(id); }
   inline bool isPrimary(unsigned int id){ return (primaryIDs_.count(id) > 0); }
+  inline void clearPrimaries(){ primaryIDs_.clear(); }
 
   SimActivityRegistry::BeginOfTrackSignal m_beginOfTrackSignal;
   SimActivityRegistry::EndOfTrackSignal m_endOfTrackSignal;
