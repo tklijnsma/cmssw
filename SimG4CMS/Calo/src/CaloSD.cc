@@ -347,6 +347,173 @@ bool CaloSD::checkHit() {
 
 int CaloSD::getNumberOfHits() { return theHC->entries(); }
 
+
+std::string CaloSD::printableDecayChain(std::vector<unsigned int> decayChain){
+  /*
+  Takes a vector of ints (representing trackIDs), and returns a formatted string
+  for debugging purposes
+  */
+  std::stringstream ss;
+  for(long unsigned int i=0; i < decayChain.size(); i++){
+    if (i>0) ss << " <- ";
+    ss << decayChain[i];
+    }
+  return ss.str();
+  }
+
+void CaloSD::hitBookkeepingFineCalo(const G4Step* step, const G4Track* currentTrack, CaloG4Hit* hit){
+  /*
+  Performs bookkeeping: Determines what trackIDs are to be recorded for the hit (typically some
+  some parent trackID), and also sets the right flags on either the TrackInformation object or 
+  the TrackWithHistory object to make sure the right track is saved to the SimTrack collection.
+
+  `currentTrack` is the track that is currently being processed by Geant
+  */
+  TrackInformation* trkInfo = cmsTrackInformation(currentTrack);
+  // Copy the  class's currentID so we can freely modify it without influencing 
+  // hits created later in possibly non-fine detectors by the same track
+  CaloHitID hitID = currentID;
+  // First check if the current currentTrack passes criteria
+  if (trkInfo->crossedBoundary() || trkInfo->passesCaloSplittingCriterion()){
+#ifdef EDM_ML_DEBUG
+    edm::LogVerbatim("DoFineCalo")
+      << "currentTrack " << currentTrack->GetTrackID()
+      << " itself has crossedBoundary=" << trkInfo->crossedBoundary()
+      << " and passesCaloSplittingCriterion=" << trkInfo->passesCaloSplittingCriterion()
+      << " ; recording it for hit " << hit->getUnitID();
+#endif
+    hitID.setFineTrackID(currentTrack->GetTrackID());
+    hit->setID(hitID); // Actually overwrite the ID for the hit
+    trkInfo->storeTrack(true);
+    // If saving because of the splitting criterion, be sure to update the parent 4-momentum
+    if (trkInfo->passesCaloSplittingCriterion()){
+      TrackWithHistory * parentTrack = m_trackManager->getTrackByID(currentTrack->GetParentID());
+      parentTrack->applyCorrectionToMomentumAtBoundary(currentTrack);
+      }
+    return;
+    }
+  // currentTrack itself does not pass thresholds / does not cross boundary; go through its history to find a track that does
+  TrackWithHistory* recordTrackWithHistory;
+  std::vector<unsigned int> decayChain; // Keep track of decay chain of this track for debugging purposes
+  decayChain.push_back(currentTrack->GetTrackID());
+  // Find the first parent of this track that passes the required criteria
+  // Start from first parent
+  unsigned int recordTrackID = currentTrack->GetParentID();
+#ifdef EDM_ML_DEBUG
+  edm::LogVerbatim("DoFineCalo")
+    << "Trying to find the first parent of hit " << hit->getUnitID()
+    << " that passes saving criterion (crosses boundary or specific criterion)"
+    << "; starting with first parent track " << recordTrackID;
+#endif
+  // Check whether this first parent actually exists
+  if (recordTrackID <= 0){
+    // Track ID 0 is not a track;
+    // This means the current currentTrack has no parent, but apparently it also didn't fit saving criteria
+    // edm::LogVerbatim("DoFineCalo")
+    throw cms::Exception("Unknown", "CaloSD")
+      << "ERROR: Track " << currentTrack->GetTrackID()
+      << " has no parent, does not fit saving criteria, but left hit " << hit->getUnitID()
+      << "; recording it but it's weird!"
+      ;
+    // trkInfo->storeTrack(true);
+    // recordTrackID = currentTrack->GetTrackID();
+    // hitID.overwriteTrackID(recordTrackID);
+    // hitID.setFineTrackID(recordTrackID);
+    // hit->setID(hitID); // Actually overwrite the ID for the hit
+    // return;
+    }
+  // Start progressing through the track's history
+  while(true){
+    decayChain.push_back(recordTrackID);
+    recordTrackWithHistory = m_trackManager->getTrackByID(recordTrackID);
+    if (recordTrackID < (unsigned int)hitID.trackID()){
+      // A parent of the currentTrack has a lower trackID than the current
+      // hitID.trackID(). This means the current hitID.trackID() does not point
+      // to the earliest ancestor of the currentTrack.
+      // The current hitID.trackID() might not be a saved track yet, but the
+      // ancestor is *always* saved track. 
+      // Fix this by overwriting the hitID's track ID.
+#ifdef EDM_ML_DEBUG
+      edm::LogVerbatim("DoFineCalo")
+        << "Primary did not fit saving-criteria - Overwriting hitID.trackID "
+        << hitID.trackID() << " by " << recordTrackID;
+#endif
+      hitID.overwriteTrackID(recordTrackID);
+      }
+    // Check if this parent fits the boundary-crossing criteria
+    if (recordTrackWithHistory->crossedBoundary() && recordTrackWithHistory->getIDAtBoundary() == (int)recordTrackID){
+#ifdef EDM_ML_DEBUG
+      edm::LogVerbatim("DoFineCalo")
+        << "Recording track " << recordTrackID
+        << " as source of hit " << hit->getUnitID()
+        << "; crossed boundary at pos=("
+          << recordTrackWithHistory->getPositionAtBoundary().x() << ","
+          << recordTrackWithHistory->getPositionAtBoundary().y() << ","
+          << recordTrackWithHistory->getPositionAtBoundary().z() << ")"
+        << " mom=("
+          << recordTrackWithHistory->getMomentumAtBoundary().x() << ","
+          << recordTrackWithHistory->getMomentumAtBoundary().y() << ","
+          << recordTrackWithHistory->getMomentumAtBoundary().z() << ","
+          << recordTrackWithHistory->getMomentumAtBoundary().e() << ")"
+        << " id@boundary=" << recordTrackWithHistory->getIDAtBoundary()
+        << "; decayChain: " << printableDecayChain(decayChain);
+#endif
+      break;
+      }
+    // Check if this parent fits the internal calo splitting criteria
+    else if (recordTrackWithHistory->passesCaloSplittingCriterion()){
+#ifdef EDM_ML_DEBUG
+      edm::LogVerbatim("DoFineCalo")
+        << "Recording track " << recordTrackID
+        << " as source of hit " << hit->getUnitID()
+        << "; passes splitting criteria"
+        << "; decayChain: " << printableDecayChain(decayChain);
+#endif
+      // Be sure to update the parent 4-momentum to avoid energy double counting
+      TrackWithHistory * parentTrack = m_trackManager->getTrackByID(recordTrackWithHistory->parentID());
+      parentTrack->applyCorrectionToMomentumAtBoundary(recordTrackWithHistory);
+      break;
+      }
+    // This parent track did not fit criteria - go to the next parent
+#ifdef EDM_ML_DEBUG
+    edm::LogVerbatim("DoFineCalo")
+      << "Track " << recordTrackID
+      << " did not cross the boundary or fit other criteria";
+#endif
+    recordTrackID = recordTrackWithHistory->parentID();
+    if (recordTrackID <= 0){
+      // Track ID 0 is not a track;
+      // This means that no parent of the currentTrack fitted the criteria
+      // edm::LogVerbatim("DoFineCalo")
+      //   << "WARNING: No parent track passes critera for hit " << hit->getUnitID()
+      //   << ", recording last ancestor (probably primary?) track " << recordTrackWithHistory->trackID()
+      //   << "; decayChain: " << printableDecayChain(decayChain);
+      //   ;
+      // // Revert active ID back to the last track in the parentage
+      // recordTrackID = recordTrackWithHistory->trackID();
+      // break;
+      throw cms::Exception("Unknown", "CaloSD")
+        << "Hit " << hit->getUnitID()
+        << " does not have any parent track that passes the criteria!"
+        << " decayChain so far: " << printableDecayChain(decayChain)
+        ;
+      }
+    }
+  // Parentage traversal done - do the bookeeping for the found ancestor track
+  recordTrackWithHistory->save();
+  hitID.setFineTrackID(recordTrackID);
+  hit->setID(hitID); // Actually overwrite the ID for the hit
+#ifdef EDM_ML_DEBUG
+  edm::LogVerbatim("DoFineCalo")
+    << "Stored the following bookeeping for hit " << hit->getUnitID()
+    <<  "hitID.trackID()=" << hitID.trackID()
+    << " hitID.getFineTrackID()=" << hitID.getFineTrackID()
+    << " recordTrackWithHistory->trackID()=" << recordTrackWithHistory->trackID()
+    << " recordTrackWithHistory->saved()=" << recordTrackWithHistory->saved();
+#endif
+  }
+
+
 CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
 #ifdef EDM_ML_DEBUG
   edm::LogVerbatim("CaloSim") << "CaloSD::CreateNewHit " << getNumberOfHits() << " for " << GetName()
@@ -376,9 +543,7 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
   aHit->setPosition(posGlobal.x(), posGlobal.y(), posGlobal.z());
   aHit->setIncidentEnergy(incidentEnergy);
   updateHit(aHit);
-
   storeHit(aHit);
-
   TrackInformation* trkInfo = cmsTrackInformation(theTrack);
 
 #ifdef EDM_ML_DEBUG
@@ -396,172 +561,9 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
 #endif
 
   if (doFineCalo_){
-    // theTrack itself won't be available in m_trackManager.m_trksForThisEvent,
-    // so check the track itself first without getting TrackWithHistory from the track manager
-    // if (theTrack->GetKineticEnergy() > eMinFine_){
-    if (trkInfo->crossedBoundary() || trkInfo->passesCaloSplittingCriterion()){
-#ifdef EDM_ML_DEBUG
-      edm::LogVerbatim("DoFineCalo")
-        << "theTrack " << theTrack->GetTrackID()
-        << " itself has crossedBoundary=" << trkInfo->crossedBoundary()
-        << " and passesCaloSplittingCriterion=" << trkInfo->passesCaloSplittingCriterion()
-        << " ; recording it for hit " << aHit->getUnitID();
-#endif
-      currentID.setFineTrackID(theTrack->GetTrackID());
-      aHit->setID(currentID); // Actually overwrite the ID for the hit
-      trkInfo->storeTrack(true);
-      // If saving because of the splitting criterion, be sure to update the parent 4-momentum
-      if (trkInfo->passesCaloSplittingCriterion()){
-        TrackWithHistory * parentTrack = m_trackManager->getTrackByID(theTrack->GetParentID());
-        // parentTrack->setCorrectedMomentumAtBoundary(trkInfo->parentMomentumAtCreation());
-        parentTrack->applyCorrectionToMomentumAtBoundary(theTrack);
-        }
-      }
-    // theTrack itself does not pass thresholds / does not cross boundary; go through its history to find a track that does
-    else{
-      // double recordTrackEnergy;
-      // bool foundViableTrack = false;
-      TrackWithHistory* recordTrackWithHistory;
-      // Keep track of decay chain of this track for debugging purposes
-      std::vector<unsigned int> decayChain;
-      decayChain.push_back(theTrack->GetTrackID());
-      // Lambda to convert the vector to a nice printable string for debugging
-      auto decayChainToStr = [](std::vector<unsigned int> decayChain) {
-        // std::string str = "";
-        std::stringstream ss;
-        for(long unsigned int i=0; i < decayChain.size(); i++){
-          if (i>0) ss << " <- ";
-          ss << decayChain[i];
-          }
-        return ss.str();
-        };
-      // Find the first parent of this track that passes the required criteria
-      // Start from first parent
-      unsigned int recordTrackID = theTrack->GetParentID();
-#ifdef EDM_ML_DEBUG
-      edm::LogVerbatim("DoFineCalo")
-        << "Trying to find the first parent of hit " << aHit->getUnitID()
-        << " that passes saving criterion (crosses boundary or specific criterion)"
-        << "; starting with first parent track " << recordTrackID;
-#endif
-      if (recordTrackID <= 0){
-        // TODO: Clean this up a little, it's practically the condition checking as below
-        // Track ID 0 is not a track;
-        // This means the current track has no parent, but apparently it also didn't fit saving criteria
-        edm::LogVerbatim("DoFineCalo")
-          << "WARNING: Track " << theTrack->GetTrackID()
-          << " has no parent, does not fit saving criteria, but left hit " << aHit->getUnitID()
-          << "; recording it but it's weird!"
-          ;
-        trkInfo->storeTrack(true);
-        recordTrackID = theTrack->GetTrackID();
-        currentID.overwriteTrackID(recordTrackID);
-        currentID.setFineTrackID(recordTrackID);
-        aHit->setID(currentID); // Actually overwrite the ID for the hit
-        }
-      else {
-        while(true){
-          decayChain.push_back(recordTrackID);
-          recordTrackWithHistory = m_trackManager->getTrackByID(recordTrackID);
-          if (recordTrackID < (unsigned int)currentID.trackID()){
-            // This is a weird case that might happen for pions:
-            // The 'primary' track ID for this secondary track doesn't fit the criteria
-            // for being saved (i.e. did not cross a boundary or fit other splitting criteria).
-            // What is noted as the 'primary' track here is probably not the initial state particle
-            // but rather some decay product that is marked as primary in NewTrackAction.
-            // Solution for this case: Overwrite the 'primary' ID of the decay product with the
-            // real primary ID from the initial particle, which *is* always saved so we have no orphan hits.
-#ifdef EDM_ML_DEBUG
-            edm::LogVerbatim("DoFineCalo")
-              << "Primary did not fit saving-criteria - Overwriting currentID.trackID "
-              << currentID.trackID() << " by " << recordTrackID;
-#endif
-            currentID.overwriteTrackID(recordTrackID);
-            }
-          if (recordTrackWithHistory->crossedBoundary() && recordTrackWithHistory->getIDAtBoundary() == (int)recordTrackID){
-            // foundViableTrack = true;
-#ifdef EDM_ML_DEBUG
-            edm::LogVerbatim("DoFineCalo")
-              << "Recording track " << recordTrackID
-              // << " with E=" << recordTrackEnergy
-              << " as source of hit " << aHit->getUnitID()
-              << "; crossed boundary at pos=("
-                << recordTrackWithHistory->getPositionAtBoundary().x() << ","
-                << recordTrackWithHistory->getPositionAtBoundary().y() << ","
-                << recordTrackWithHistory->getPositionAtBoundary().z() << ")"
-              << " mom=("
-                << recordTrackWithHistory->getMomentumAtBoundary().x() << ","
-                << recordTrackWithHistory->getMomentumAtBoundary().y() << ","
-                << recordTrackWithHistory->getMomentumAtBoundary().z() << ","
-                << recordTrackWithHistory->getMomentumAtBoundary().e() << ")"
-              << " id@boundary=" << recordTrackWithHistory->getIDAtBoundary()
-              << "; decayChain: " << decayChainToStr(decayChain);
-#endif
-            break;
-            }
-          else if (recordTrackWithHistory->passesCaloSplittingCriterion()){
-            // foundViableTrack = true;
-#ifdef EDM_ML_DEBUG
-            edm::LogVerbatim("DoFineCalo")
-              << "Recording track " << recordTrackID
-              << " as source of hit " << aHit->getUnitID()
-              << "; passes splitting criteria"
-              << "; decayChain: " << decayChainToStr(decayChain);
-#endif
-            // Be sure to update the parent 4-momentum to avoid energy double counting
-            TrackWithHistory * parentTrack = m_trackManager->getTrackByID(recordTrackWithHistory->parentID());
-            // parentTrack->setCorrectedMomentumAtBoundary(recordTrackWithHistory->parentMomentumAtCreation());
-            parentTrack->applyCorrectionToMomentumAtBoundary(recordTrackWithHistory);
-            break;
-            }
-          else{
-            // Go to the next parent
-#ifdef EDM_ML_DEBUG
-            edm::LogVerbatim("DoFineCalo")
-              << "Track " << recordTrackID
-              << " did not cross the boundary or fit other criteria";
-#endif
-            recordTrackID = recordTrackWithHistory->parentID();
-            if (recordTrackID <= 0){
-              // Track ID 0 is not a track;
-              // This means the track had no parent, and we've reached the end of the parentage
-              edm::LogVerbatim("DoFineCalo")
-                << "WARNING: No parent track passes critera for hit " << aHit->getUnitID()
-                << ", recording last ancestor (probably primary?) track " << recordTrackWithHistory->trackID()
-                << "; decayChain: " << decayChainToStr(decayChain);
-                ;
-              // Revert active ID back to the last track in the parentage
-              recordTrackID = recordTrackWithHistory->trackID();
-              break;
-              // throw cms::Exception("Unknown", "CaloSD")
-              //   << "Hit " << aHit->getUnitID()
-              //   << " does not have any parent track that passes the criteria!"
-              //   << " decayChain so far: " << decayChainToStr(decayChain)
-              //   ;
-              }
-            }
-          }
-        // Store the first viable track, or raise if it couldn't be found
-        // if (!foundViableTrack){
-        //   throw cms::Exception("Unknown", "CaloSD")
-        //     << "Something went wrong determining the track for hit " << aHit->getUnitID()
-        //     << "; no viable track was found."
-        //     << " decayChain so far: " << decayChainToStr(decayChain);
-        //   }
-        recordTrackWithHistory->save();
-        currentID.setFineTrackID(recordTrackID);
-        aHit->setID(currentID); // Actually overwrite the ID for the hit
-#ifdef EDM_ML_DEBUG
-        edm::LogVerbatim("DoFineCalo")
-          << "currentID.trackID()=" << currentID.trackID()
-          << " currentID.getFineTrackID()=" << currentID.getFineTrackID()
-          << " recordTrackWithHistory->trackID()=" << recordTrackWithHistory->trackID()
-          << " recordTrackWithHistory->saved()=" << recordTrackWithHistory->saved();
-#endif
-        }
-      }
-    }
-  // Non-fine history bookkeeping
+    hitBookkeepingFineCalo(aStep, theTrack, aHit);
+  }
+  // 'Traditional', non-fine history bookkeeping
   else{
     double etrack = 0;
     if (currentID.trackID() == primIDSaved) {  // The track is saved; nothing to be done
@@ -877,6 +879,7 @@ bool CaloSD::saveHit(CaloG4Hit* aHit) {
       << "Saving hit " << aHit->getUnitID()
       << " with trackID=" << tkID << " fineTrackID=" << fineTrackID;
 #endif
+    // Take the aHit-information and move it to the actual PCaloHitContainer
     slave.get()->processHits(
       aHit->getUnitID(), aHit->getEM() / CLHEP::GeV, aHit->getHadr() / CLHEP::GeV, time, tkID, fineTrackID, aHit->getDepth());
     }
