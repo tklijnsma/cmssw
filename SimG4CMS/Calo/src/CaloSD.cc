@@ -142,7 +142,7 @@ G4bool CaloSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   int primaryID = getTrackID(theTrack);
   if (unitID > 0) {
     currentID.setID(unitID, time, primaryID, depth);
-    if (doFineCalo_) currentID.setFineTrackID(theTrack->GetTrackID());
+    // if (doFineCalo_) currentID.setFineTrackID(theTrack->GetTrackID());
   } else {
     if (aStep->GetTotalEnergyDeposit() > 0.0) {
       const G4TouchableHistory* touch = static_cast<const G4TouchableHistory*>(theTrack->GetTouchable());
@@ -179,6 +179,9 @@ G4bool CaloSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
 #endif
     if (!hitExists(aStep)) {
       currentHit = createNewHit(aStep, aStep->GetTrack());
+    }
+    else {
+      edm::LogVerbatim("DoFineCalo") << "Not creating new hit, only updating currentHit " << currentHit->getUnitID();
     }
     return true;
   }
@@ -307,6 +310,12 @@ bool CaloSD::hitExists(const G4Step* aStep) {
     updateHit(currentHit);
     return true;
   }
+
+  // Note T. Klijnsma:
+  // This is a rather strange place to set these class variables.
+  // The code would be much more readable if all logic for determining
+  // whether to update a hit or create a new hit is done in one place,
+  // and only then perform the actual updating or creating of the hit.
 
   // Reset entry point for new primary
   posGlobal = aStep->GetPreStepPoint()->GetPosition();
@@ -506,7 +515,7 @@ void CaloSD::hitBookkeepingFineCalo(const G4Step* step, const G4Track* currentTr
 #ifdef EDM_ML_DEBUG
   edm::LogVerbatim("DoFineCalo")
     << "Stored the following bookeeping for hit " << hit->getUnitID()
-    <<  "hitID.trackID()=" << hitID.trackID()
+    << " hitID.trackID()=" << hitID.trackID()
     << " hitID.getFineTrackID()=" << hitID.getFineTrackID()
     << " recordTrackWithHistory->trackID()=" << recordTrackWithHistory->trackID()
     << " recordTrackWithHistory->saved()=" << recordTrackWithHistory->saved();
@@ -548,11 +557,14 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
 
 #ifdef EDM_ML_DEBUG
   edm::LogVerbatim("DoFineCalo")
-    << "Creating new hit " << aHit->getUnitID()
+    << "Creating new hit " << aHit->getUnitID() << " using "
+    << ( trkInfo->isCurrentlyInsideFineVolume() ? "FINECALO" : "normal CaloSD" )
     << "; currentID.trackID=" << currentID.trackID()
     << " currentID.getFineTrackID=" << currentID.getFineTrackID()
     << " theTrack=" << theTrack->GetTrackID()
-      << " (parentTrackId=" << theTrack->GetParentID()
+      << " ("
+      << "isCurrentlyInsideFineVolume=" << trkInfo->isCurrentlyInsideFineVolume()
+      << " parentTrackId=" << theTrack->GetParentID()
       << " getIDfineCalo=" << trkInfo->getIDfineCalo()
       << " getIDonCaloSurface=" << trkInfo->getIDonCaloSurface()
       << ")"
@@ -560,7 +572,7 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
     ;
 #endif
 
-  if (doFineCalo_){
+  if (doFineCalo_ && trkInfo->isCurrentlyInsideFineVolume()){
     hitBookkeepingFineCalo(aStep, theTrack, aHit);
   }
   // 'Traditional', non-fine history bookkeeping
@@ -848,9 +860,14 @@ bool CaloSD::saveHit(CaloG4Hit* aHit) {
     time += correctT;
 
   // Do track bookkeeping a little differently for fine tracking
-  if (doFineCalo_){
+  if (doFineCalo_ && aHit->getID().hasFineTrackID()){
     tkID = aHit->getTrackID();
     fineTrackID = aHit->getID().getFineTrackID();
+#ifdef EDM_ML_DEBUG
+    edm::LogVerbatim("DoFineCalo")
+      << "Saving hit " << aHit->getUnitID()
+      << " with trackID=" << tkID << " fineTrackID=" << fineTrackID;
+#endif
     // Check if the track is actually in the trackManager
     if (m_trackManager){
       if (!m_trackManager->trackExists(tkID)){
@@ -874,11 +891,6 @@ bool CaloSD::saveHit(CaloG4Hit* aHit) {
       ok = false;
       throw cms::Exception("Unknown", "CaloSD") << "m_trackManager not set, saveHit ok=false!";
       }
-#ifdef EDM_ML_DEBUG
-    edm::LogVerbatim("DoFineCalo")
-      << "Saving hit " << aHit->getUnitID()
-      << " with trackID=" << tkID << " fineTrackID=" << fineTrackID;
-#endif
     // Take the aHit-information and move it to the actual PCaloHitContainer
     slave.get()->processHits(
       aHit->getUnitID(), aHit->getEM() / CLHEP::GeV, aHit->getHadr() / CLHEP::GeV, time, tkID, fineTrackID, aHit->getDepth());
