@@ -48,9 +48,12 @@ void TrackingAction::PreUserTrackingAction(const G4Track* aTrack) {
       << "PreUserTrackingAction: Start processing track " << aTrack->GetTrackID()
       << " pdgid=" << aTrack->GetDefinition()->GetPDGEncoding()
       << " ekin[GeV]=" << aTrack->GetKineticEnergy() / CLHEP::GeV
-      << " z[cm]=" << aTrack->GetPosition().z() / CLHEP::cm
-      << " vertexz[cm]=" << aTrack->GetVertexPosition().z() / CLHEP::cm
+      << " vertex[cm]=("
+        << aTrack->GetVertexPosition().x() / CLHEP::cm << ","
+        << aTrack->GetVertexPosition().y() / CLHEP::cm << ","
+        << aTrack->GetVertexPosition().z() / CLHEP::cm << ")"
       << " parentid=" << aTrack->GetParentID()
+      << " isCurrentlyInsideFineVolume=" << trkInfo->isCurrentlyInsideFineVolume()
       ;
     // Always save primaries
     // Decays from primaries are marked as primaries (see NewTrackAction), but are not saved by

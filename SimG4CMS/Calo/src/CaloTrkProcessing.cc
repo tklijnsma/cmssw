@@ -201,13 +201,25 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
     // const G4VTouchable* touch = aStep->GetPreStepPoint()->GetTouchable();
     int prestepLV = isItCalo(aStep->GetPreStepPoint()->GetTouchable(), fineDetectors_);
     int poststepLV = isItCalo(aStep->GetPostStepPoint()->GetTouchable(), fineDetectors_);
+    // Don't just detect transitions; tracks starting _inside_ a fine volume should
+    // still have isCurrentlyInsideFineVolume()==true
+    if (prestepLV >= 0){
+      if (!trkInfo->isCurrentlyInsideFineVolume()){
+        edm::LogVerbatim("DoFineCalo")
+          << "Started in fine volume " << prestepLV << ":"
+          << " Track " << id
+          ;
+        }
+      trkInfo->setCurrentlyInsideFineVolume(true);
+      }
     if (
       prestepLV < 0 && poststepLV >= 0
+      // Update: Allow back-scattering and filter it out later; ensure consistency during the SIM step
       // Require abs(pre z position) < abs(current z position) to prevent back scattering tracks from being counted
-      && std::abs(theTrack->GetStep()->GetPreStepPoint()->GetPosition().z()) < std::abs(theTrack->GetPosition().z())
+      // && std::abs(theTrack->GetStep()->GetPreStepPoint()->GetPosition().z()) < std::abs(theTrack->GetPosition().z())
       ) {
       edm::LogVerbatim("DoFineCalo")
-        << "Crossed boundary:"
+        << "Entered fine volume " << poststepLV << ":"
         << " Track " << id
         << " pdgid=" << theTrack->GetDefinition()->GetPDGEncoding()
         << " prestepLV=" << prestepLV
@@ -232,6 +244,24 @@ void CaloTrkProcessing::update(const G4Step* aStep) {
           << theTrack->GetVertexPosition().z() / CLHEP::cm << ")"
         ;
       trkInfo->setCrossedBoundary(theTrack);
+      trkInfo->setCurrentlyInsideFineVolume(true);
+      }
+    else if ( prestepLV >= 0 && poststepLV < 0 ){
+      edm::LogVerbatim("DoFineCalo")
+        << "Exited fine volume " << prestepLV << ":"
+        << " Track " << id
+        << " GetKineticEnergy[GeV]=" << theTrack->GetKineticEnergy() / CLHEP::GeV
+        << " GetVertexKineticEnergy[GeV]=" << theTrack->GetVertexKineticEnergy() / CLHEP::GeV
+        << " prestepPosition[cm]=("
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPreStepPoint()->GetPosition().z() / CLHEP::cm << ")"
+        << " poststepPosition[cm]=("
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().x() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().y() / CLHEP::cm << ","
+          << theTrack->GetStep()->GetPostStepPoint()->GetPosition().z() / CLHEP::cm << ")"
+        ;
+      trkInfo->setCurrentlyInsideFineVolume(false);
       }
     // Decide whether to store in history
     if (!trkInfo->isInHistory()){

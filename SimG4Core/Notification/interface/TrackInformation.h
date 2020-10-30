@@ -62,6 +62,11 @@ public:
   bool passesCaloSplittingCriterion() const { return flagCaloSplittingCriterion_; }
   void setPassesCaloSplittingCriterion() { flagCaloSplittingCriterion_ = true; }
 
+  // Needed to be able to tell in CaloSD whether the a hit is left in a fine idLastVolume_
+  // This is NOT a great way to do things; CaloSD should itself know whether it is fine or not.
+  // Delete this code when CaloSD has received this fix.
+  bool isCurrentlyInsideFineVolume() const { return isInsideFineVolume_; }
+  void setCurrentlyInsideFineVolume(bool flag){ isInsideFineVolume_ = flag; }
 
   // Boundary crossing variables
   void setCrossedBoundary(const G4Track* track){
@@ -200,6 +205,7 @@ private:
   bool hasParentMomentumAtCreation_;
   math::XYZTLorentzVectorD parentMomentumAtCreation_;
   std::map< const G4Track*, math::XYZTLorentzVectorD > momentumAtCreationSecondaryMap_;
+  bool isInsideFineVolume_;
 
   void assertCrossedBoundary() const {
     if (!crossedBoundary_){
@@ -232,7 +238,8 @@ private:
         caloSurfaceParticleP_(0),
         hasCastorHit_(false),
         castorHitPID_(0),
-        hasParentMomentumAtCreation_(false)
+        hasParentMomentumAtCreation_(false),
+        isInsideFineVolume_(false)
         {}
   friend class NewTrackAction;
 };
