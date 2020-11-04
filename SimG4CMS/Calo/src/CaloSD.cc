@@ -318,7 +318,7 @@ bool CaloSD::isItFineCalo(const G4VTouchable* touch) {
       ok = (lv == detector.lv);
 #ifdef EDM_ML_DEBUG
       std::string name = (lv == 0) ? "Unknown" : lv->GetName();
-      edm::LogVerbatim("CaloSim") << "CaloSD: volume " << name1 << ":" << detector.name << " at Level "
+      edm::LogVerbatim("CaloSim") << "CaloSD: volume " << name << ":" << detector.name << " at Level "
                                   << detector.level << " Flag " << ok;
 #endif
       if (ok)
