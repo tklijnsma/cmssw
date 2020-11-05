@@ -643,6 +643,8 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
     << ( trkInfo->isCurrentlyInsideFineVolume() ? "FINECALO" : "normal CaloSD" )
     << "; currentID.trackID=" << currentID.trackID()
     << " currentID.getFineTrackID=" << currentID.getFineTrackID()
+    << " isItFineCalo(aStep->GetPostStepPoint()->GetTouchable())=" << isItFineCalo(aStep->GetPostStepPoint()->GetTouchable())
+    << " isItFineCalo(aStep->GetPreStepPoint()->GetTouchable())=" << isItFineCalo(aStep->GetPreStepPoint()->GetTouchable())
     << " theTrack=" << theTrack->GetTrackID()
       << " ("
       << "isCurrentlyInsideFineVolume=" << trkInfo->isCurrentlyInsideFineVolume()
@@ -654,7 +656,7 @@ CaloG4Hit* CaloSD::createNewHit(const G4Step* aStep, const G4Track* theTrack) {
     ;
 #endif
 
-  if (doFineCalo_ && trkInfo->isCurrentlyInsideFineVolume()){
+  if (doFineCalo_ && isItFineCalo(aStep->GetPostStepPoint()->GetTouchable())){
     hitBookkeepingFineCalo(aStep, theTrack, aHit);
   }
   // 'Traditional', non-fine history bookkeeping
