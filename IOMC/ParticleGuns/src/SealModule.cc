@@ -13,7 +13,8 @@
 #include "IOMC/ParticleGuns/interface/FlatRandomEThetaGunProducer.h"
 #include "IOMC/ParticleGuns/interface/FileRandomKEThetaGunProducer.h"
 #include "IOMC/ParticleGuns/interface/FileRandomMultiParticlePGunProducer.h"
-#include "IOMC/ParticleGuns/interface/FlatRandomMultiParticlePGunProducer.h"
+#include "IOMC/ParticleGuns/interface/FlatEtaRangeGunProducer.h"
+#include "IOMC/ParticleGuns/interface/FlatEtaRangeNoTrackerGunProducer.h"
 #include "IOMC/ParticleGuns/interface/FlatRandomOneOverPtGunProducer.h"
 #include "IOMC/ParticleGuns/interface/FlatRandomPtAndDxyGunProducer.h"
 #include "IOMC/ParticleGuns/interface/FlatRandomPtGunProducer.h"
@@ -22,6 +23,7 @@
 #include "IOMC/ParticleGuns/interface/MultiParticleInConeGunProducer.h"
 #include "IOMC/ParticleGuns/interface/RandomtXiGunProducer.h"
 #include "IOMC/ParticleGuns/interface/RandomMultiParticlePGunProducer.h"
+#include "IOMC/ParticleGuns/interface/CloseByFlatDeltaRGunProducer.h"
 #include "IOMC/ParticleGuns/interface/RandomXiThetaGunProducer.h"
 // particle gun prototypes
 //
@@ -51,6 +53,12 @@ using edm::FlatRandomEThetaGunProducer;
 DEFINE_FWK_MODULE(FlatRandomEThetaGunProducer);
 using edm::FlatRandomMultiParticlePGunProducer;
 DEFINE_FWK_MODULE(FlatRandomMultiParticlePGunProducer);
+using edm::FlatEtaRangeGunProducer;
+DEFINE_FWK_MODULE(FlatEtaRangeGunProducer);
+using edm::FlatEtaRangeNoTrackerGunProducer;
+DEFINE_FWK_MODULE(FlatEtaRangeNoTrackerGunProducer);
+using edm::FlatRandomPtThetaGunProducer;
+DEFINE_FWK_MODULE(FlatRandomPtThetaGunProducer);
 using edm::FlatRandomOneOverPtGunProducer;
 DEFINE_FWK_MODULE(FlatRandomOneOverPtGunProducer);
 using edm::FlatRandomPtAndDxyGunProducer;
@@ -65,5 +73,7 @@ using edm::RandomtXiGunProducer;
 DEFINE_FWK_MODULE(RandomtXiGunProducer);
 using edm::RandomMultiParticlePGunProducer;
 DEFINE_FWK_MODULE(RandomMultiParticlePGunProducer);
+using edm::CloseByFlatDeltaRGunProducer;
+DEFINE_FWK_MODULE(CloseByFlatDeltaRGunProducer);
 using edm::RandomXiThetaGunProducer;
 DEFINE_FWK_MODULE(RandomXiThetaGunProducer);
