@@ -172,9 +172,6 @@ void peprCandidateFromHitProducer::endStream() {
 }
 
 void peprCandidateFromHitProducer::produce(edm::Event& event, const edm::EventSetup& setup) {
-
-    recHitTools_.getEventSetup(setup);
-
     // fill rechits into windows
     fillWindows(event);
 

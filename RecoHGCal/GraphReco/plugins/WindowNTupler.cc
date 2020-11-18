@@ -356,7 +356,6 @@ WindowNTupler::endJob()
 }
 
 void WindowNTupler::beginRun(edm::Run const &iEvent, edm::EventSetup const &es) {
-  recHitTools_.getEventSetup(es);
   trackprop_ .getEventSetup(es);
   sctools_.setRechitTools(recHitTools_);
 }

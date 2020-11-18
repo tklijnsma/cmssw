@@ -204,8 +204,6 @@ void HGCTruthProducer::beginStream(edm::StreamID) {}
 void HGCTruthProducer::endStream() {}
 
 void HGCTruthProducer::produce(edm::Event& event, const edm::EventSetup& setup) {
-  recHitTools_.getEventSetup(setup);
-
   std::cout << "HGCTruthProducer::produce" << std::endl;
 
   // create unique pointers for output products

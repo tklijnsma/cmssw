@@ -169,16 +169,13 @@ void WindowInference::endStream() {
 
 void WindowInference::analyze(const edm::Event& event,
         const edm::EventSetup& setup) {
-    recHitTools_.getEventSetup(setup);
-
-
     // fill rechits into windows
     fillWindows(event);
 
     // run the evaluation per window
-    for (auto & window : windows_) {
+    //for (auto & window : windows_) {
        // window.evaluate(session_);
-    }
+    //}
 
     // reconstruct showers using all windows and put them into the event
     //reconstructShowers();

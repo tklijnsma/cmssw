@@ -520,7 +520,6 @@ void CaloTruthAccumulator::initializeEvent(edm::Event const &event, edm::EventSe
 
   m_detIdToTotalSimEnergy.clear();
   prop_.setEventSetup(setup);
-  recHitTools_.getEventSetup(setup);
   sctools_.setRechitTools(recHitTools_);
 }
 
