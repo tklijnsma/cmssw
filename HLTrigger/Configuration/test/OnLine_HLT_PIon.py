@@ -2,7 +2,6 @@
 
 # /dev/CMSSW_11_2_0/PIon/V10 (CMSSW_11_2_0_pre7)
 
-
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process( "HLTPIon" )
