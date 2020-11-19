@@ -75,8 +75,7 @@ class PCaloHitWithPosition : public PCaloHit {
             detId = hit->id() ;
             myDepth = hit->depth() ;
             theEventId = hit->eventId() ;
-            // This only when the fine calo patches are in
-            // myFineItra = hit->geantFineTrackId() ;
+            myFineItra = hit->geantFineTrackId() ;
             }
 
     private:
